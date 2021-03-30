@@ -44,13 +44,12 @@ class VideoManager:
     def __init__(self) :
 
         print("------------1. Load Video------------")
-        if False :
-            ftype = [('load mp4 file','*.mp4')]
-            self.__video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
-            if self.__video_path == None :
-                exit()
-        #else : self.__video_path = "../video/video3.mp4" # デバッグ用
-        else : self.__video_path = "../video/video.mp4" # デバッグ用
+        #ftype = [('load mp4 file','*.mp4')]
+        #self.__video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
+        #if self.__video_path == None :
+        #    exit()
+        self.__video_path = "../sample/curve1.mp4" # デバッグ用
+        #self.__video_path = "../video/video.mp4" # デバッグ用
 
         self.__frames = tutil.load_video(self.__video_path, 600) # np.float32
         n, h, w = self.__frames.shape
