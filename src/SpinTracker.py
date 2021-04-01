@@ -262,29 +262,32 @@ class MainDialog(ttk.Frame):
 # slightly diffent grayscale images.
 
 def main():
-    # initialize VideoManager (Singleton)
-    VideoManager.get_inst()
-    print(VideoManager.get_inst().num_frames())
+
+    app  = tk.Tk()
+
+    # get video file name 
+    ftype = [('load mp4 file','*.mp4')]
+    video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
+    if video_path == None :
+        exit()
+    #self.__video_path = "../sample/curve1.mp4" # load curve1 automatically for debug 
+    
+    VideoManager.get_inst().load_vidoe_file(video_path)
 
     #prepare glfw
     if not glfw.init():
         raise RuntimeError("Fails to initialize glfw")
 
-    app  = tk.Tk()
     app.title("SpinTracker Parameter")
     app.geometry("330x350")
     dialog = MainDialog(app)
 
-    # note: when use tk.mainloop(), it is difficult to track errors 
-    # that occur in call_back functions of glfw
-    """
-    note1: 下でループすると、tkが表示されない
-    while not ( dialog.glfw_manager.window_should_close()):
-        dialog.glfw_manager.wait_events_timeout()
-
-    note2 : 下でループすると、glfwで起きたエラーがトラックできない
-    tk.mainloop()
-    """
+    #note1: with the following mainloop with glfw, tk is not available 
+    #while not ( dialog.glfw_manager.window_should_close()):
+    #    dialog.glfw_manager.wait_events_timeout()
+    #
+    #note2 : with the following loop, errors in glfw can not be tracked
+    #tk.mainloop()
 
     def custom_main_loop():
         if dialog.glfw_manager.window_should_close() :

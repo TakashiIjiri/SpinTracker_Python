@@ -179,14 +179,14 @@ def load_video(file_path, maxnum_frames=1024) :
     h, w, ch = frame.shape
 
     print("----load video----", num_frames, h, w)
-    frames = np.zeros((num_frames, h, w), dtype = np.float32)
-    frames[0,:,:] = np.float32( cv2.cvtColor(np.flipud(frame), cv2.COLOR_BGR2GRAY) )
+    frames = np.zeros((num_frames, h, w), dtype = np.uint8)
+    frames[0,:,:] = cv2.cvtColor(np.flipud(frame), cv2.COLOR_BGR2GRAY)
 
     for i in range(1, num_frames) :
         ret, frame = cap.read()
         if ret == 0 :
             break
-        frames[i,:,:] = np.float32( cv2.cvtColor(np.flipud(frame), cv2.COLOR_BGR2GRAY) )
+        frames[i,:,:] = cv2.cvtColor(np.flipud(frame), cv2.COLOR_BGR2GRAY)
     return frames
 
 

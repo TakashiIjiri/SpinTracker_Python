@@ -42,24 +42,21 @@ class VideoManager:
 
     # constructor (called only from get_inst())
     def __init__(self) :
+        pass        
 
-        print("------------1. Load Video------------")
-        #ftype = [('load mp4 file','*.mp4')]
-        #self.__video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
-        #if self.__video_path == None :
-        #    exit()
-        self.__video_path = "../sample/curve1.mp4" # デバッグ用
-        #self.__video_path = "../video/video.mp4" # デバッグ用
 
-        self.__frames = tutil.load_video(self.__video_path, 600) # np.float32
+    # this function should be called at first
+    def load_vidoe_file(self, fname ): 
+        print("------------Load Video------------")
+        self.__frames = tutil.load_video(fname, 600) # np.uint8
         n, h, w = self.__frames.shape
-        self.__roi_frames      = np.zeros((n,int(h/4),int(w/4)), dtype=np.float32 )
-        self.__roi_frames_bin  = np.zeros((n,int(h/4),int(w/4)), dtype=np.uint8   )
+        self.__roi_frames      = np.zeros((n,h//4,w//4), dtype=np.float32 )
+        self.__roi_frames_bin  = np.zeros((n,h//4,w//4), dtype=np.uint8   )
 
         # load sphere mesh -> normalize the vertext position (spin dir candidate)
         self.__sphere_model = tmesh.TMesh( init_as="Obj", fname="./sphere3.obj")
         norms = np.linalg.norm(self.__sphere_model.verts, axis=1).reshape(-1,1)
-        self.__sphere_model.verts  /= norms
+        self.__sphere_model.verts /= norms
         self.__sphere_model.set_projection_texture()
 
         # parameters used for tracking 
@@ -70,7 +67,7 @@ class VideoManager:
         self.__ball_r1 = 20
         self.__ball_r2 = 15
 
-        # tracking info and ball clips computed by "run_tracking()"
+        # tracking info and ball clips
         self.__tempmatch_cxcy = np.zeros((n,2), dtype=np.int32  )
         self.__hough_xyr      = np.zeros((n,3), dtype=np.float32)
         self.__ball_clips      = np.zeros((n,int(50),int(50)), dtype=np.float32 )
@@ -80,17 +77,18 @@ class VideoManager:
 
         # RPS (Revolution per seconds) candidates by "run_estimate_spinspeed()"
         self.__estimated_periods = np.zeros(0)
-        self.__estimated_RPSs = np.zeros(0)
+        self.__estimated_RPSs    = np.zeros(0)
 
         # spin axis computed by "run_estimate_spinaxis"
         self.__spin_axis = np.array([.0,.1,.0], dtype=np.float32)
         self.__costs_for_allaxis = np.zeros(self.__sphere_model.verts.shape[0])
         self.__spin_period = 1000
 
+
     def get_frame_uint8(self, idx) :
         if idx < 0 or self.__frames.shape[0] <= idx:
-            return np.uint8( np.zeros_like(self.__frames[0]) )
-        return np.uint8( self.__frames[idx] )
+            return np.zeros_like(self.__frames[0])
+        return self.__frames[idx]
 
     def get_frame_size(self):
         if self.__frames.shape[0] == 0 :
