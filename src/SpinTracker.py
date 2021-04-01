@@ -190,7 +190,6 @@ class MainDialog(ttk.Frame):
         elif fi_1 < 1000 : tmp = "0" + tmp 
         self.slider_label['text'] = tmp
 
-
     def spin_changed(self):
         print("radi_release", self.radi_release.get())
         print("radi_catch  ", self.radi_catch.get())

@@ -143,7 +143,6 @@ class EventManager:
         self.b_drag_ballvis = False
         self.ballvis_rot   = np.identity(3, dtype=np.float32)
 
-
     def func_Ldown(self, point, glfw_manager) :
         self.b_Lbtn = True
         self.pre_pos = self.init_pos = point
@@ -158,11 +157,12 @@ class EventManager:
 
         #check dragging ball_vis
         ray_p, ray_d = glfw_manager.get_cursor_ray(point)
-        h, w = VideoManager.get_inst().get_frame_size()
+        frame_idx  = VideoManager.get_inst().get_current_frame_idx()
+        h, w       = VideoManager.get_inst().get_frame_uint8(frame_idx).shape
+
         x0, y0, size = w + BC_VIS_SIZE, 0, BALL_VIS_SIZE * 6
         if x0 < ray_p[0] < x0 + size and y0 < ray_p[1] < y0 + size : 
             self.b_drag_ballvis = True
-
 
     def func_Lup(self, point, glfw_manager):
         self.b_Lbtn = False
@@ -234,12 +234,12 @@ class EventManager:
     def func_draw_scene(self, glfw_manager):
         frame_idx  = VideoManager.get_inst().get_current_frame_idx()
         frame      = VideoManager.get_inst().get_frame_uint8(frame_idx)
-        frame_roi  = VideoManager.get_inst().get_roi_frame_bin_uint8(frame_idx)
+        frame_roi  = VideoManager.get_inst().get_frame_roi_bin_uint8(frame_idx)
 
-        ball_clip      = VideoManager.get_inst().get_ball_clip_uint8(frame_idx)
-        ball_clip_diff = VideoManager.get_inst().get_ball_clip_diff_uint8(frame_idx)
-        ball_clip_mask = VideoManager.get_inst().get_ball_clip_mask_uint8()
-        ball_clip_ave  = VideoManager.get_inst().get_ball_clip_average_uint8()
+        ballclip      = VideoManager.get_inst().get_ballclip_uint8(frame_idx)
+        ballclip_diff = VideoManager.get_inst().get_ballclip_diff_uint8(frame_idx)
+        ballclip_mask = VideoManager.get_inst().get_ballclip_mask_uint8()
+        ballclip_ave  = VideoManager.get_inst().get_ballclip_average_uint8()
 
         rect_roi   = np.int32( VideoManager.get_inst().get_roi_rect() )
         rect_zoom  = np.int32( VideoManager.get_inst().get_zoom_win_rect() )
@@ -253,11 +253,8 @@ class EventManager:
         tmesh.t_draw_image(w, h, frame)
         draw_rect(rect_roi , np.array([1.0,1.0,0.0]))
         draw_rect(rect_zoom, np.array([1.0, 0.3, 0.3]))
-        rx,ry = rect_roi[0], rect_roi[1]
-        draw_rect(rect_tempmatch + np.array([rx,ry,rx,ry]), np.array([0.0, 1.0, 1.0]))
-        draw_circle( rx+ cxcyr[0], ry+ cxcyr[1], cxcyr[2], np.array([1.0, 0.0, 0.0]))        
-        
-
+        draw_rect(rect_tempmatch, np.array([0.0, 1.0, 1.0]))
+        draw_circle( cxcyr[0], cxcyr[1], cxcyr[2], np.array([1.0, 0.0, 0.0]))        
 
         #draw zoom window
         glTranslate(0, h, 0)
@@ -272,27 +269,28 @@ class EventManager:
         glTranslate(0,-h,0)
 
         #draw roi_frames_bin
-        glTranslate(-frame_roi.shape[0],0,0)
+        glTranslate(-frame_roi.shape[1] - 20,0,0)
         tmesh.t_draw_image(frame_roi.shape[1], frame_roi.shape[0], frame_roi)
-        draw_rect(rect_tempmatch, np.array([0.0, 1.0, 1.0]) )
-        draw_circle( cxcyr[0], cxcyr[1], cxcyr[2], np.array([1.0, 0.0, 0.0]))        
-        glTranslate(frame_roi.shape[0],0,0)
+        rx,ry = rect_roi[0], rect_roi[1]
+        draw_rect( rect_tempmatch - np.array([rx,ry,rx,ry]), np.array([0.0, 1.0, 1.0]) )
+        draw_circle( cxcyr[0] - rx, cxcyr[1] - ry, cxcyr[2], np.array([1.0, 0.0, 0.0]))        
+        glTranslate(frame_roi.shape[1] + 20,0,0)
 
         #ball clip 
         glTranslate( w, 0, 0)
-        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ball_clip)
+        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ballclip)
         glTranslate( 0, BC_VIS_SIZE, 0)
-        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ball_clip_diff, color="rgb")
+        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ballclip_diff, color="rgb")
         glTranslate( 0, BC_VIS_SIZE, 0)
-        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ball_clip_ave)
+        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ballclip_ave)
         glTranslate( 0, BC_VIS_SIZE, 0)
-        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ball_clip_mask)
+        tmesh.t_draw_image( BC_VIS_SIZE, BC_VIS_SIZE, ballclip_mask)
         glTranslate(-w,-BC_VIS_SIZE*3, 0)
         
         # ball 3d vis 
         ofst = w + BC_VIS_SIZE
         glTranslate( ofst + BALL_VIS_SIZE, BALL_VIS_SIZE, 0)
-        draw_spinaxis_sphere(BALL_VIS_SIZE, ball_clip, self.ballvis_rot, spin_axis )
+        draw_spinaxis_sphere(BALL_VIS_SIZE, ballclip, self.ballvis_rot, spin_axis )
         glTranslate(-ofst - BALL_VIS_SIZE,-BALL_VIS_SIZE, 0)
 
         glTranslate( ofst + BALL_VIS_SIZE, 4*BALL_VIS_SIZE, 0)

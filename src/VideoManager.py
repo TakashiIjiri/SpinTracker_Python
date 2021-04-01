@@ -48,10 +48,9 @@ class VideoManager:
     # this function should be called at first
     def load_vidoe_file(self, fname ): 
         print("------------Load Video------------")
-        self.__frames = tutil.load_video(fname, 600) # np.uint8
+        self.__frames = tutil.load_video(fname, 600) # np.float32
         n, h, w = self.__frames.shape
-        self.__roi_frames      = np.zeros((n,h//4,w//4), dtype=np.float32 )
-        self.__roi_frames_bin  = np.zeros((n,h//4,w//4), dtype=np.uint8   )
+        self.__frames_roi_bin = np.zeros((n,h//4,w//4), dtype=np.uint8   )
 
         # load sphere mesh -> normalize the vertext position (spin dir candidate)
         self.__sphere_model = tmesh.TMesh( init_as="Obj", fname="./sphere3.obj")
@@ -62,60 +61,53 @@ class VideoManager:
         # parameters used for tracking 
         self.__current_frame_idx = 0
         self.__roi_rect = np.array( [1/4*w, 1/4*h, 3/4*w, 3/4*h])
-        self.__ZOOM_WIN_R = 50
-        self.__zoom_win_c = [w/2, h/2]
-        self.__ball_r1 = 20
-        self.__ball_r2 = 15
+        self.__ZOOM_WIN_R    = 50
+        self.__zoom_win_cxcy = [w/2, h/2]
+        self.__ball_r1       = 20 # ball radius at release [pix]
+        self.__ball_r2       = 15 # ball radius at catch   [pix]
 
         # tracking info and ball clips
         self.__tempmatch_cxcy = np.zeros((n,2), dtype=np.int32  )
-        self.__hough_xyr      = np.zeros((n,3), dtype=np.float32)
-        self.__ball_clips      = np.zeros((n,int(50),int(50)), dtype=np.float32 )
-        self.__ball_clips_diff = np.zeros((n,int(50),int(50)), dtype=np.float32 )
-        self.__ball_clip_ave   = np.zeros((  int(50),int(50)), dtype=np.float32 )
-        self.__ball_clip_mask  = np.zeros((  int(50),int(50)), dtype=np.float32 )
+        self.__hough_xyr     = np.zeros((n,3), dtype=np.float32)
+        self.__ballclip      = np.zeros((n,int(50),int(50)), dtype=np.float32 )
+        self.__ballclip_diff = np.zeros((n,int(50),int(50)), dtype=np.float32 )
+        self.__ballclip_ave  = np.zeros((  int(50),int(50)), dtype=np.float32 )
+        self.__ballclip_mask = np.zeros((  int(50),int(50)), dtype=np.float32 )
 
         # RPS (Revolution per seconds) candidates by "run_estimate_spinspeed()"
         self.__estimated_periods = np.zeros(0)
         self.__estimated_RPSs    = np.zeros(0)
 
         # spin axis computed by "run_estimate_spinaxis"
-        self.__spin_axis = np.array([.0,.1,.0], dtype=np.float32)
         self.__costs_for_allaxis = np.zeros(self.__sphere_model.verts.shape[0])
         self.__spin_period = 1000
 
+        self.__optimum_spin_axis = np.array([.0,.1,.0], dtype=np.float32)
+        self.__optimum_spin_period = 10000
+        self.__optimum_spin_RPS    = 10000
 
+
+    #getters for images
     def get_frame_uint8(self, idx) :
         if idx < 0 or self.__frames.shape[0] <= idx:
-            return np.zeros_like(self.__frames[0])
-        return self.__frames[idx]
+            return np.zeros_like(self.__frames[0], np.uint8)
+        return np.uint8(self.__frames[idx])
 
-    def get_frame_size(self):
-        if self.__frames.shape[0] == 0 :
-            return 0, 0
-        return self.__frames.shape[1], self.__frames.shape[2] # return height, width of frame
+    def get_frame_roi_bin_uint8(self, idx) :
+        if idx < 0 or self.__frames_roi_bin.shape[0] <= idx:
+            return np.zeros_like( self.__frames_roi_bin[0], dtype=np.uint8 )
+        return np.uint8( self.__frames_roi_bin[idx] )
 
-    def get_roi_frame_bin_uint8(self, idx) :
-        if idx < 0 or self.__roi_frames_bin.shape[0] <= idx:
-            return np.zeros_like( self.__roi_frames_bin[0], dtype=np.uint8 )
-        return np.uint8( self.__roi_frames_bin[idx] )
+    def get_ballclip_uint8(self, idx) :
+        if idx < 0 or self.__ballclip.shape[0] <= idx:
+            return np.zeros_like( self.__ballclip[0], dtype=np.uint8 )
+        return np.uint8( self.__ballclip[idx] )
 
-    def get_ball_clip_uint8(self, idx) :
-        if idx < 0 or self.__ball_clips.shape[0] <= idx:
-            return np.zeros_like( self.__ball_clips[0], dtype=np.uint8 )
-        return np.uint8( self.__ball_clips[idx] )
-
-    def get_sphere_model(self) :
-        return self.__sphere_model
-
-    def get_spin_axis(self):
-        return self.__spin_axis
-
-    def get_ball_clip_diff_uint8(self, idx) :
-        if idx < 0 or self.__ball_clips_diff.shape[0] <= idx:
-            return np.zeros_like( self.__ball_clips_diff[0], dtype=np.uint8 )
-        bc_1 =  self.__ball_clips_diff[idx].copy()
-        bc_2 = -self.__ball_clips_diff[idx].copy()
+    def get_ballclip_diff_uint8(self, idx) :
+        if idx < 0 or self.__ballclip_diff.shape[0] <= idx:
+            return np.zeros_like( self.__ballclip_diff[0], dtype=np.uint8 )
+        bc_1 =  self.__ballclip_diff[idx].copy()
+        bc_2 = -self.__ballclip_diff[idx].copy()
         bc_1[bc_1<0] = 0
         bc_2[bc_2<0] = 0
         h,w = bc_2.shape
@@ -125,14 +117,23 @@ class VideoManager:
         img[:,:,2] = np.uint8(3 * bc_1)
         return img
 
-    def get_ball_clip_average_uint8(self) :
-        return np.uint8( self.__ball_clip_ave )
+    def get_ballclip_average_uint8(self) :
+        return np.uint8( self.__ballclip_ave )
 
-    def get_ball_clip_mask_uint8(self):
-        img = self.__ball_clip_mask.copy()
+    def get_ballclip_mask_uint8(self):
+        img = self.__ballclip_mask.copy()
         max_v = np.max(img)
         if max_v > 0 : img = img / max_v * 255
         return np.uint8( img )
+    
+    #getters for estimation results 
+
+    def get_sphere_model(self) :
+        return self.__sphere_model
+
+    def get_spin_axis(self):
+        return self.__optimum_spin_axis
+
 
     def get_axis_estim_costs(self) : 
         return self.__costs_for_allaxis
@@ -184,35 +185,19 @@ class VideoManager:
         if y - R < 0 : y = R
         if x + R >= w : x = w - 1 - R
         if y + R >= h : y = h - 1 - R
-        self.__zoom_win_c = np.array([x,y])
+        self.__zoom_win_cxcy = np.array([x,y])
 
     def get_zoom_win_rect(self):
-        x0 = self.__zoom_win_c[0] - self.__ZOOM_WIN_R
-        x1 = self.__zoom_win_c[0] + self.__ZOOM_WIN_R
-        y0 = self.__zoom_win_c[1] - self.__ZOOM_WIN_R
-        y1 = self.__zoom_win_c[1] + self.__ZOOM_WIN_R
+        x0 = self.__zoom_win_cxcy[0] - self.__ZOOM_WIN_R
+        x1 = self.__zoom_win_cxcy[0] + self.__ZOOM_WIN_R
+        y0 = self.__zoom_win_cxcy[1] - self.__ZOOM_WIN_R
+        y1 = self.__zoom_win_cxcy[1] + self.__ZOOM_WIN_R
         return np.array([x0, y0, x1, y1])
 
-    # generate multiple circlular templates
-    # templates[ 0 ] has radius self.ball_r1
-    # templates[n-1] has radius self.ball_r1
-    # templates[i]   interplates r1~r2
-    def __gen_ball_templates(self, num_templates) :
-        r = max(self.__ball_r1, self.__ball_r2)
-        temp_radi = int( r * 3 / 2 )
-        temp_size = 2 * temp_radi + 1
-        dR  = (self.__ball_r2 - self.__ball_r1) / ( num_templates - 1)
-
-        ball_templates = np.zeros( (num_templates, temp_size, temp_size), dtype=np.uint8 )
-        for i in range(num_templates) :
-            radi = int(self.__ball_r1 + dR * i)
-            cv2.circle(ball_templates[i], (temp_radi, temp_radi), radi, (255, 255, 255), thickness=-1)
-        return ball_templates
-
     def get_tempmatch_rect(self, idx):
-        if idx < 0 or self.__roi_frames_bin.shape[0] <= idx:
+        if idx < 0 or self.__tempmatch_cxcy.shape[0] <= idx:
             return np.zeros(4, dtype = np.int32)
-        temp_radi = int( self.__ball_r1 * 3 / 2 )
+        temp_radi = int( max(self.__ball_r1, self.__ball_r2) * 3 / 2 )
         x0 = self.__tempmatch_cxcy[idx, 0] - temp_radi
         x1 = self.__tempmatch_cxcy[idx, 0] + temp_radi + 1
         y0 = self.__tempmatch_cxcy[idx, 1] - temp_radi
@@ -220,22 +205,22 @@ class VideoManager:
         return np.array([x0, y0, x1, y1])
 
     def get_hough_cxcyr (self, idx):
-        if idx < 0 or self.__roi_frames_bin.shape[0] <= idx:
+        if idx < 0 or self.__hough_xyr.shape[0] <= idx:
             return np.zeros(3, dtype = np.float32)
         return self.__hough_xyr[idx]
 
     def update_ballclip_mask( self, r1, r2, mask_angle, mask_rate) :
         r = max(r1,r2)
-        self.__ball_clip_mask = tutil.gen_mask_image(r, mask_angle, mask_rate)
+        self.__ballclip_mask = tutil.gen_mask_image(r, mask_angle, mask_rate)
 
 
     
     def run_taracking_and_spinestimation(
         self, 
-        radius_release, radius_catch     , 
-        bkgrnd_mode   , bkgrnd_thresh,
-        morpho_size   , tempmatch_step   ,
-        mask_angle    , mask_rate        ,
+        radius_release, radius_catch  , 
+        bkgrnd_mode   , bkgrnd_thresh ,
+        morpho_size   , tempmatch_step,
+        mask_angle    , mask_rate     ,
         video_fps
     ):
         time_0 = time.perf_counter()
@@ -243,15 +228,16 @@ class VideoManager:
         self.__ball_r1 = radius_release
         self.__ball_r2 = radius_catch
         rect = np.int32(self.__roi_rect)
-        self.__roi_frames = self.__frames[:,rect[1]:rect[3], rect[0]:rect[2]]
+        frames_roi = self.__frames[:,rect[1]:rect[3], rect[0]:rect[2]]
 
         # 1. tracking by template matching
         center_seq, start_i, end_i, frames_bin = tutil.t_trackball_temp_match(
-                                    self.__roi_frames, 
-                                    self.__ball_r1   , self.__ball_r2   ,
+                                    frames_roi, 
+                                    self.__ball_r1   , 
+                                    self.__ball_r2   ,
                                     bkgrnd_mode, bkgrnd_thresh, tempmatch_step )
         self.__tempmatch_cxcy = center_seq
-        self.__roi_frames_bin = frames_bin
+        self.__frames_roi_bin = frames_bin
         # trim first 10% frames
         TRIM_RATE = 0.1
         start_i  += int( (end_i - start_i) * TRIM_RATE)
@@ -259,19 +245,25 @@ class VideoManager:
 
         #2. tracking by hough transform 
         self.__hough_xyr = tutil.t_trackball_hough( 
-                                    self.__roi_frames_bin, 
-                                    self.__ball_r1, self.__ball_r2,
+                                    self.__frames_roi_bin, 
+                                    self.__ball_r1, 
+                                    self.__ball_r2,
                                     self.__tempmatch_cxcy, 
                                     start_i, end_i) 
         time_2 = time.perf_counter()
+
+        self.__tempmatch_cxcy[:,0] += rect[0]
+        self.__tempmatch_cxcy[:,1] += rect[1]
+        self.__hough_xyr[:,0]      += rect[0]
+        self.__hough_xyr[:,1]      += rect[1]
 
         if end_i - start_i < 32 :
             print("the system fails to track the ball well")
             return
 
         #3. generate ballclip
-        self.__ball_clips = tutil.t_generate_ballclip2( 
-                                    self.__roi_frames, 
+        self.__ballclip = tutil.t_generate_ballclip2( 
+                                    self.__frames, 
                                     self.__ball_r1, 
                                     self.__ball_r2, 
                                     self.__hough_xyr,
@@ -279,13 +271,13 @@ class VideoManager:
         time_3 = time.perf_counter()
 
         # 4. generate mask and spin speed estimation
-        w = self.__ball_clips.shape[1]
-        self.__ball_clip_mask = tutil.gen_mask_image( w//2, mask_angle, mask_rate)
+        w = self.__ballclip.shape[1]
+        self.__ballclip_mask = tutil.gen_mask_image( w//2, mask_angle, mask_rate)
 
         max_rps = 56 #3360 RPM
         estim_periods, estim_RPSs = tutil.t_estimate_spinspeed ( 
-                                    self.__ball_clips[ start_i : end_i + 1 ], 
-                                    self.__ball_clip_mask,
+                                    self.__ballclip[ start_i : end_i + 1 ], 
+                                    self.__ballclip_mask,
                                     video_fps, 
                                     max_rps)
         self.__estimated_RPSs = estim_RPSs
@@ -299,25 +291,27 @@ class VideoManager:
 
         #5. prepare ballclip_diff (ballclip - ballclip_ave)
         trgt_frms = max( 16, int( np.min(self.__estimated_periods) ) ) * 2
-        trgt_frms = min(trgt_frms, self.__ball_clips.shape[0] )
+        trgt_frms = min(trgt_frms, self.__ballclip.shape[0] )
 
         bc_ave, bc_diff = tutil.t_gen_ballclip_diff( 
-                                    self.__ball_clips[start_i : start_i + trgt_frms, :,:], 
+                                    self.__ballclip[start_i : start_i + trgt_frms, :,:], 
                                     BLUR_RATE = 0.1)
         
-        self.__ball_clip_ave = bc_ave
-        self.__ball_clips_diff = np.zeros_like(self.__ball_clips, dtype=np.float64)
-        self.__ball_clips_diff[ start_i : start_i + trgt_frms ] = bc_diff
+        self.__ballclip_ave = bc_ave
+        self.__ballclip_diff = np.zeros_like(self.__ballclip, dtype=np.float64)
+        self.__ballclip_diff[ start_i : start_i + trgt_frms ] = bc_diff
         time_5 = time.perf_counter()
 
         # 6. spin axis estimation
         optim_axis, optim_period, costs_for_allaxes = tutil.t_estimate_spinaxis(
-                                    self.__ball_clips_diff[ start_i : start_i + trgt_frms ],
-                                    self.__ball_clip_mask,
+                                    self.__ballclip_diff[ start_i : start_i + trgt_frms ],
+                                    self.__ballclip_mask,
                                     self.__estimated_periods,
                                     self.__sphere_model.verts )
-        self.__spin_axis = optim_axis
-        self.__spin_period = optim_period
+        self.__optimum_spin_axis   = optim_axis
+        self.__optimum_spin_period = optim_period
+        self.__optimum_spin_RPS    = video_fps / optim_period
+        
         self.__costs_for_allaxis = tutil.t_normalize_1d(costs_for_allaxes)
         time_6 = time.perf_counter()
 
