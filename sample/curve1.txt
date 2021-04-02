@@ -1,0 +1,10 @@
+FPS            480
+ballr1         26
+ballr2         16
+roi_rect       603.3331909179688 530.0 1159.9998779296875 1066.6666259765625
+bk_mode        mean
+bk_thresh      12
+mask_angle     90
+mask_size      90
+morph_size     2
+tempmatch_step 2

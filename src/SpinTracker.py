@@ -139,7 +139,7 @@ class MainDialog(ttk.Frame):
         #---- Buttons ------
         btn_frame  = tk.Frame(self, pady = 3)
         btn_frame.pack(side="top", anchor=tk.W)
-        btn_import_conf  = ttk.Button(btn_frame,text="Inport config", command = self.import_config )
+        btn_import_conf  = ttk.Button(btn_frame,text="Import config", command = self.import_config )
         btn_export_conf  = ttk.Button(btn_frame,text="Export config", command = self.export_config )
         btn_run_tracking = ttk.Button(btn_frame,text="Run Tracking" , command = self.run_tracking  )
         btn_import_conf.pack (side="left", anchor=tk.W)
@@ -207,24 +207,76 @@ class MainDialog(ttk.Frame):
 
 
     def export_config(self):
-        pass
+        ftype = [('save config file','*.txt')]
+        fpath = filedialog.asksaveasfilename(filetypes = ftype, initialdir="./")
+        if fpath == None :
+            return
+        if fpath[-4:] != ".txt" and fpath[-4:] != ".TXT" : 
+            fpath += ".txt"
+        r1, r2 = VideoManager.get_inst().get_ball_radius()
+        rect   = VideoManager.get_inst().get_roi_rect()
+        with open(fpath, mode='w') as f:
+            f.write("FPS            " + self.fps_mode.get() + "\n")
+            f.write("ballr1         " + str(r1) + "\n")
+            f.write("ballr2         " + str(r2) + "\n")
+            f.write("roi_rect       " + str(rect[0]) + " " + str(rect[1]) + " " + str(rect[2]) + " " + str(rect[3])+ "\n")
+            f.write("bk_mode        " + self.backsubt_mode.get()   + "\n")
+            f.write("bk_thresh      " + self.backsubt_thresh.get() + "\n")
+            f.write("mask_angle     " + self.mask_angle_val.get()  + "\n")
+            f.write("mask_size      " + self.mask_rate_val.get()   + "\n")
+            f.write("morph_size     " + self.miscs_morpho.get() + "\n")
+            f.write("tempmatch_step " + self.miscs_tminterval.get()+ "\n")
 
 
     def import_config(self):
-        pass
+        ftype = [('load config file','*.txt')]
+        fpath  = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
+        if fpath == None :
+            return
+        with open(fpath) as f:
+            for l in f.readlines() : 
+                a = l.split()
+                if a[0] == "FPS" : 
+                    self.fps_mode.set(a[1])
+                if a[0] == "ballr1" : 
+                    r1 = int(a[1])
+                    self.radi_release.set(a[1])
+                if a[0] == "ballr2" :
+                    r2 = int(a[1])
+                    self.radi_catch.set(a[1])
+                if a[0] ==  "roi_rect":
+                    rect = [float(a[1]), float(a[2]), float(a[3]), float(a[4])] 
+                if a[0] ==  "bk_mode":
+                    self.backsubt_mode.set(a[1])
+                if a[0] ==  "bk_thresh":
+                    self.backsubt_thresh.set(a[1])
+                if a[0] ==  "mask_angle":
+                    self.mask_angle_val.set(a[1])
+                if a[0] ==  "mask_size":
+                    self.mask_rate_val.set(a[1])
+                if a[0] ==  "morph_size": 
+                    self.miscs_morpho.set(a[1])
+                if a[0] ==  "tempmatch_step": 
+                    self.miscs_tminterval.set(a[1])
+                print(a)
+        VideoManager.get_inst().set_roi_rect(rect)
+        VideoManager.get_inst().set_ball_radius(r1, r2)
+        self.glfw_manager.display()
+
+
 
 
     def run_tracking(self):
         
         VideoManager.get_inst().run_taracking_and_spinestimation(
-            radius_release = int(self.radi_release     .get() ), 
-            radius_catch   = int(self.radi_catch       .get() ), 
-            bkgrnd_mode    = "mean", #TODO
-            bkgrnd_thresh  = int(self.backsubt_thresh  .get() ),
-            morpho_size    = int( self.miscs_morpho    .get() ), 
-            tempmatch_step = int( self.miscs_tminterval.get() ) ,
-            mask_angle     = int( self.mask_angle_val  .get() ), 
-            mask_rate      = float(self.mask_rate_val  .get()) / 100,
+            radius_release = int(  self.radi_release    .get() ), 
+            radius_catch   = int(  self.radi_catch      .get() ), 
+            bkgrnd_mode    =       self.backsubt_mode   .get()  ,
+            bkgrnd_thresh  = int(  self.backsubt_thresh .get() ),
+            morpho_size    = int(  self.miscs_morpho    .get() ), 
+            tempmatch_step = int(  self.miscs_tminterval.get() ) ,
+            mask_angle     = int(  self.mask_angle_val  .get() ), 
+            mask_rate      = float(self.mask_rate_val   .get()) / 100,
             video_fps      = int(self.fps_mode.get())
         )
 
