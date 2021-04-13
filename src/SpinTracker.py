@@ -3,6 +3,7 @@ from VideoManager import *
 import glfw
 import numpy as np
 import time
+import math
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -14,6 +15,7 @@ import GlfwWinManager
 from EventManager import *
 
 import cv2
+import sys
 
 
 
@@ -29,12 +31,12 @@ class MainDialog(ttk.Frame):
         #initialize glfw window
         self.manager = EventManager()
         self.glfw_manager = GlfwWinManager.GlfwWinManager(
-            "Main Window", [800, 600], [100,100],
+            "Main Window", [800, 600], [330,30],
             self.manager.func_Ldown, self.manager.func_Lup,
             self.manager.func_Rdown, self.manager.func_Rup,
             self.manager.func_Mdown, self.manager.func_Mup,
-            self.manager.func_mouse_move, self.manager.func_draw_scene, 
-            self.manager.func_on_keydown, self.manager.func_on_keyup, self.manager.func_on_keykeep) 
+            self.manager.func_mouse_move, self.manager.func_draw_scene,
+            self.manager.func_on_keydown, self.manager.func_on_keyup, self.manager.func_on_keykeep)
 
         #initialize tkinter Frame
         self.root = root_
@@ -43,16 +45,26 @@ class MainDialog(ttk.Frame):
         quit_btn = ttk.Button(self,text="Quit",command = self.quit_spintracker )
         quit_btn.pack(side="top", anchor=tk.E)
 
-        #----frame_idx --- (slider) 
+        #----frame_idx --- (slider)
         slider_frame = tk.Frame(self, pady = 3)
         slider_frame.pack(side="top")
         num_frames = VideoManager.get_inst().num_frames()
         self.slider_val = tk.IntVar()
-        self.slider = ttk.Scale(slider_frame, variable=self.slider_val, takefocus=1, 
+        self.slider = ttk.Scale(slider_frame, variable=self.slider_val, takefocus=1,
                                 length=280, from_=0, to=num_frames-1, command=self.slider_changed )
         self.slider.pack(side="left")
         self.slider_label = ttk.Label(slider_frame, text="0000")
         self.slider_label.pack(side="right")
+
+        spin_estim_frame = tk.Frame(self, pady = 3, background="white")
+        spin_estim_frame.pack(side="top")
+        self.label_spinspeed = ttk.Label(spin_estim_frame, background="white",
+                                            text="Spin Speed : XXX [RPS]revolution per second")
+        self.label_spinaxis  = ttk.Label(spin_estim_frame, background="white",
+                                            text="Spin Axis  : θ = XXX, φ=XXX [radian]")
+        self.label_spinspeed.grid(row=0, column=0, sticky=tk.W)
+        self.label_spinaxis .grid(row=1, column=0, sticky=tk.W)
+
 
         #----fps---- (radio button)
         fps_frame = tk.Frame(self, pady = 3)
@@ -104,7 +116,7 @@ class MainDialog(ttk.Frame):
         backsubt_rb3.pack(side="left")
         backsubt_thresh.pack(side="left")
 
-        #----- Mask angle and size 
+        #----- Mask angle and size
         mask_frame = tk.Frame(self, pady=5)
         mask_frame.pack(side="top", anchor=tk.W)
         mask_label1 = ttk.Label(mask_frame, text="mask angle [deg]: ")
@@ -146,13 +158,13 @@ class MainDialog(ttk.Frame):
         btn_export_conf.pack (side="left", anchor=tk.W)
         btn_run_tracking.pack(side="left", anchor=tk.W)
 
-        # set focus on slider 
+        # set focus on slider
         self.slider.focus_set()
 
-        VideoManager.get_inst().update_ballclip_mask( 
-            int(self.radi_release.get()), 
-            int(self.radi_catch.get()  ), 
-            int(self.mask_angle_val.get()), 
+        VideoManager.get_inst().update_ballclip_mask(
+            int(self.radi_release.get()),
+            int(self.radi_catch.get()  ),
+            int(self.mask_angle_val.get()),
             float(self.mask_rate_val.get()) / 100.0 )
 
 
@@ -163,20 +175,20 @@ class MainDialog(ttk.Frame):
     def slider_changed(self, e):
         fi = self.slider_val.get()
         tmp = str(fi)
-        if   fi < 10 : tmp = "000" + tmp 
-        elif fi < 100 : tmp = "00" + tmp 
-        elif fi < 1000 : tmp = "0" + tmp 
+        if   fi < 10 : tmp = "000" + tmp
+        elif fi < 100 : tmp = "00" + tmp
+        elif fi < 1000 : tmp = "0" + tmp
         self.slider_label['text'] = tmp
         VideoManager.get_inst().set_current_frame_idx(fi)
         self.glfw_manager.display()
         self.slider.focus_set()
 
-    
-    # This function monitors modification of the current video idx 
+
+    # This function monitors modification of the current video idx
     # note : glfwのイベントからtkinterのwidgetを変更すると
     #「Fatal Python error: PyEval_RestoreThread: NULL tstate」 が出る可能性あり
     # tkinterの widgetはtkinterのみから編集する
-    # note : "Fatal Python error: PyEval_RestoreThread: NULL tstate"may occur, 
+    # note : "Fatal Python error: PyEval_RestoreThread: NULL tstate"may occur,
     # if tkinter widgets are modified from the thread of glfw
     # tkinter widget should be modified from events of tkinter
     def poling_video_frame_update(self):
@@ -185,9 +197,9 @@ class MainDialog(ttk.Frame):
         if fi_1 == fi_2 : return
         self.slider_val.set(fi_1)
         tmp = str(fi_1)
-        if   fi_1 < 10 : tmp = "000" + tmp 
-        elif fi_1 < 100 : tmp = "00" + tmp 
-        elif fi_1 < 1000 : tmp = "0" + tmp 
+        if   fi_1 < 10 : tmp = "000" + tmp
+        elif fi_1 < 100 : tmp = "00" + tmp
+        elif fi_1 < 1000 : tmp = "0" + tmp
         self.slider_label['text'] = tmp
 
     def spin_changed(self):
@@ -198,10 +210,10 @@ class MainDialog(ttk.Frame):
         self.glfw_manager.display()
 
     def spin_mask_changed(self):
-        VideoManager.get_inst().update_ballclip_mask( 
-            int(self.radi_release.get()), 
-            int(self.radi_catch.get()  ), 
-            int(self.mask_angle_val.get()), 
+        VideoManager.get_inst().update_ballclip_mask(
+            int(self.radi_release.get()),
+            int(self.radi_catch.get()  ),
+            int(self.mask_angle_val.get()),
             float(self.mask_rate_val.get()) / 100.0 )
         self.glfw_manager.display()
 
@@ -211,7 +223,7 @@ class MainDialog(ttk.Frame):
         fpath = filedialog.asksaveasfilename(filetypes = ftype, initialdir="./")
         if fpath == None :
             return
-        if fpath[-4:] != ".txt" and fpath[-4:] != ".TXT" : 
+        if fpath[-4:] != ".txt" and fpath[-4:] != ".TXT" :
             fpath += ".txt"
         r1, r2 = VideoManager.get_inst().get_ball_radius()
         rect   = VideoManager.get_inst().get_roi_rect()
@@ -234,18 +246,18 @@ class MainDialog(ttk.Frame):
         if fpath == None :
             return
         with open(fpath) as f:
-            for l in f.readlines() : 
+            for l in f.readlines() :
                 a = l.split()
-                if a[0] == "FPS" : 
+                if a[0] == "FPS" :
                     self.fps_mode.set(a[1])
-                if a[0] == "ballr1" : 
+                if a[0] == "ballr1" :
                     r1 = int(a[1])
                     self.radi_release.set(a[1])
                 if a[0] == "ballr2" :
                     r2 = int(a[1])
                     self.radi_catch.set(a[1])
                 if a[0] ==  "roi_rect":
-                    rect = [float(a[1]), float(a[2]), float(a[3]), float(a[4])] 
+                    rect = [float(a[1]), float(a[2]), float(a[3]), float(a[4])]
                 if a[0] ==  "bk_mode":
                     self.backsubt_mode.set(a[1])
                 if a[0] ==  "bk_thresh":
@@ -254,9 +266,9 @@ class MainDialog(ttk.Frame):
                     self.mask_angle_val.set(a[1])
                 if a[0] ==  "mask_size":
                     self.mask_rate_val.set(a[1])
-                if a[0] ==  "morph_size": 
+                if a[0] ==  "morph_size":
                     self.miscs_morpho.set(a[1])
-                if a[0] ==  "tempmatch_step": 
+                if a[0] ==  "tempmatch_step":
                     self.miscs_tminterval.set(a[1])
                 print(a)
         VideoManager.get_inst().set_roi_rect(rect)
@@ -267,27 +279,33 @@ class MainDialog(ttk.Frame):
 
 
     def run_tracking(self):
-        
-        VideoManager.get_inst().run_taracking_and_spinestimation(
-            radius_release = int(  self.radi_release    .get() ), 
-            radius_catch   = int(  self.radi_catch      .get() ), 
+        rps, axis = VideoManager.get_inst().run_taracking_and_spinestimation(
+            radius_release = int(  self.radi_release    .get() ),
+            radius_catch   = int(  self.radi_catch      .get() ),
             bkgrnd_mode    =       self.backsubt_mode   .get()  ,
             bkgrnd_thresh  = int(  self.backsubt_thresh .get() ),
-            morpho_size    = int(  self.miscs_morpho    .get() ), 
-            tempmatch_step = int(  self.miscs_tminterval.get() ) ,
-            mask_angle     = int(  self.mask_angle_val  .get() ), 
+            morpho_size    = int(  self.miscs_morpho    .get() ),
+            tempmatch_step = int(  self.miscs_tminterval.get() ),
+            mask_angle     = int(  self.mask_angle_val  .get() ),
             mask_rate      = float(self.mask_rate_val   .get()) / 100,
             video_fps      = int(self.fps_mode.get())
         )
 
+        axis_theta = 180.0 * math.atan2( -axis[2], axis[0] ) / math.pi
+        axis_phi   = 180.0 * math.asin( axis[1]            ) / math.pi
+        axis_theta = '{:.2f}'.format(axis_theta)
+        axis_phi   = '{:.2f}'.format(axis_phi  )
+
+        self.label_spinspeed["text"] = "Spin Speed : " + str(rps) + "[RPS] revolution per second"
+        self.label_spinaxis ["text"] = "Spin Axis  : θ = " + axis_theta + ", φ = " + axis_phi + "[deg]"
         self.glfw_manager.display()
 
 
 
 
 # + 動画を読み込み(file dialogにより指定) OK
-# + OK dialogに GUI 追加 
-#   - SetRect v.s. Zoom window (Shift+drag --> SegRect) 
+# + OK dialogに GUI 追加
+#   - SetRect v.s. Zoom window (Shift+drag --> SegRect)
 #   - OK --- SeekBar
 #   - OK --- fps 300/480...
 #   - OK Ball Radius (release/catch)
@@ -296,33 +314,37 @@ class MainDialog(ttk.Frame):
 # + OK dialogに各種ボタンを配置
 #   - Export Config File (txt)
 #   - Import Config File (txt)
-#   - perform tracking & estimation 
+#   - perform tracking & estimation
 # TODO import/export config file
 # + OK videoを表示
 # + OK ROI を指定可能に
 # + OK Trackingして結果を表示
-# DONE Directional mask  
+# DONE Directional mask
 # DONE  and its visualization
 # DONE key board input to proceed the frames
-# DONE  spin speed candidate estimation 
+# DONE  spin speed candidate estimation
 # DONE its visualization (matplotlib)
-# DONE spin axis estimation 
+# DONE spin axis estimation
 # DONE its visualization (3D viewer)
-# NOTE : resulting costs are different from the C++ version because 
-# the mp4 loaders (ffmpeg in C++ and OpenCV in python) returns 
+# NOTE : resulting costs are different from the C++ version because
+# the mp4 loaders (ffmpeg in C++ and OpenCV in python) returns
 # slightly diffent grayscale images.
 
 def main():
+    print("---------------------SpinTracker---------------------------")
 
     app  = tk.Tk()
 
-    # get video file name 
+    # get video file name
     ftype = [('load mp4 file','*.mp4')]
-    video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = "./")
+    startdir = "./"
+    if len(sys.argv) > 1 :
+        startdir = sys.argv[1]
+    video_path = filedialog.askopenfilename(filetypes = ftype , initialdir = startdir)
     if video_path == None :
         exit()
-    #self.__video_path = "../sample/curve1.mp4" # load curve1 automatically for debug 
-    
+    #self.__video_path = "../sample/curve1.mp4" # load curve1 automatically for debug
+
     VideoManager.get_inst().load_vidoe_file(video_path)
 
     #prepare glfw
@@ -330,10 +352,10 @@ def main():
         raise RuntimeError("Fails to initialize glfw")
 
     app.title("SpinTracker Parameter")
-    app.geometry("330x350")
+    app.geometry("330x370+30+30")
     dialog = MainDialog(app)
 
-    #note1: with the following mainloop with glfw, tk is not available 
+    #note1: with the following mainloop with glfw, tk is not available
     #while not ( dialog.glfw_manager.window_should_close()):
     #    dialog.glfw_manager.wait_events_timeout()
     #

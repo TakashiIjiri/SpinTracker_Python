@@ -4,7 +4,7 @@ import numpy as np
 from OpenGL.GL import *
 
 
-# cals intersection between 
+# cals intersection between
 # ray (ray_pos + t * ray_dir) with triangle (x0, x1, x2)
 # return True_or_False , intersect_pos
 def t_intersect_ray_and_triangle ( ray_pos, ray_dir, x0, x1, x2 ) :
@@ -19,10 +19,10 @@ def t_intersect_ray_and_triangle ( ray_pos, ray_dir, x0, x1, x2 ) :
         return True, ray_pos + stu[2] * ray_dir
     return False, np.zeros(3, dtype=np.float32)
 
-# 
-# -- class TMesh -- 
+#
+# -- class TMesh --
 # 3D triangle mesh model
-#  
+#
 class TMesh:
 
     # init_as should be "Non", "Cube", "Sphere", "Obj"
@@ -47,8 +47,10 @@ class TMesh:
         elif  init_as == "Sphere" :
             self.init_as_sphere(radi)
         elif  init_as == "Obj" :
-            self.init_from_obj(fname)
-
+            try:
+                self.init_from_obj(fname)
+            except FileNotFoundError:
+                self.init_as_cube(radi)
 
     def init_from_verts_polys(self, verts, uvs, polyids):
         print("init_from_verts_polys")
@@ -86,7 +88,7 @@ class TMesh:
                 vs.append([ np.cos(theta)*np.cos(phi),  np.sin(theta)*np.cos(phi), np.sin(phi) ])
         vs.append([0.,0.,1]) #北極
 
-        #Buttom(南極) / body / Top (北極) 
+        #Buttom(南極) / body / Top (北極)
         for theta_i in range(reso_hori):
             ps.append([ 0, 1+(theta_i + 1)%reso_hori, 1+theta_i])
 
@@ -202,7 +204,7 @@ class TMesh:
 
     # set tex2d[i].x = (verts[i].x - min_x) / (max_x - min_x)
     # set tex2d[i].y = (verts[i].y - min_y) / (max_y - min_y)
-    def set_projection_texture (self): 
+    def set_projection_texture (self):
         max_v, min_v = self.verts.max(axis=0), self.verts.min(axis=0)
         self.tex2d = self.verts[:,0:2].copy()
         self.tex2d[:,0] = (self.tex2d[:,0] - min_v[0] ) / (max_v[0] - min_v[0])
@@ -212,7 +214,7 @@ class TMesh:
         print("set_projection_texture")
         print(self.tex2d.shape)
         print(self.tex2d)
-        
+
 
 
     # rendering with VBO
@@ -253,7 +255,7 @@ class TMesh:
         self.gl_buffers = np.zeros(5, dtype=int)
 
     # calc intersection between ray (ray_pos + t*ray_dir) with this mesh
-    # return (1) closest_vertex_idx (-1 when ray doesnot intersect) 
+    # return (1) closest_vertex_idx (-1 when ray doesnot intersect)
     #        (2) intersection point
     def pick(self, ray_pos, ray_dir, rot, trans) :
         pick_vid = -1
@@ -279,25 +281,25 @@ class TMesh:
         return pick_vid, pick_pos
 
 
-# 
+#
 # t_draw_textured_model
 # render TMesh object (mesh_model) wit texture (img)
 #
-def t_draw_textured_model( 
-        scale_xyz , 
+def t_draw_textured_model(
+        scale_xyz ,
         mesh_model, # tmesh
-        img       , # numpy array (width, height, 1) or (width, height, 3)  
+        img       , # numpy array (width, height, 1) or (width, height, 3)
         color="gray" ):
 
     img_h, img_w = img.shape[0], img.shape[1]
 
-    #bind texture -- 
+    #bind texture --
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1)
-    texname = glGenTextures( 1 ) 
-    glBindTexture  (GL_TEXTURE_2D, texname ) 
-    if color == "gray" : 
+    texname = glGenTextures( 1 )
+    glBindTexture  (GL_TEXTURE_2D, texname )
+    if color == "gray" :
         glTexImage2D   (GL_TEXTURE_2D, 0 ,GL_LUMINANCE, img_w, img_h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, img)
-    else : 
+    else :
         glTexImage2D   (GL_TEXTURE_2D, 0 ,GL_RGB, img_w, img_h, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
@@ -305,33 +307,33 @@ def t_draw_textured_model(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
     glEnable(GL_TEXTURE_2D)
 
-    #draw texture -- 
+    #draw texture --
     glEnable(GL_NORMALIZE )
-    
+
     glPushMatrix()
     glScaled(scale_xyz[0], scale_xyz[1], scale_xyz[2])
     mesh_model.draw_by_VBO()
     glPopMatrix()
 
     #unbind (delete) texture
-    glDeleteTextures([texname]) 
+    glDeleteTextures([texname])
     glDisable(GL_NORMALIZE )
 
 
 #
 # t_draw_image
 # render a quadratic plen (width, height) with texture (img)
-#    
+#
 def t_draw_image (width, height, img, color="gray") :
     img_w, img_h = img.shape[1], img.shape[0]
-    #bind texture 
+    #bind texture
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1)
-    texname = glGenTextures( 1 ) 
+    texname = glGenTextures( 1 )
 
-    glBindTexture  (GL_TEXTURE_2D, texname ) 
-    if color == "gray" : 
+    glBindTexture  (GL_TEXTURE_2D, texname )
+    if color == "gray" :
         glTexImage2D   (GL_TEXTURE_2D, 0 ,GL_LUMINANCE, img_w, img_h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, img)
-    else : 
+    else :
         glTexImage2D   (GL_TEXTURE_2D, 0 ,GL_RGB, img_w, img_h, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
@@ -354,42 +356,40 @@ def t_draw_image (width, height, img, color="gray") :
     glEnd()
 
     #unbind (delete) texture
-    glDeleteTextures([texname]) 
+    glDeleteTextures([texname])
 
 
 #
 # t_draw_cylinder
-# render a cylinder object with (length amd radius) 
+# render a cylinder object with (length amd radius)
 # its color is specified by (ambi, diff, spec, shin)
-# 
-def t_draw_cylinder( length, radius, ambi, diff, spec, shin ) : 
+#
+def t_draw_cylinder( length, radius, ambi, diff, spec, shin ) :
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT  , ambi)
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE  , diff)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR , spec)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shin)
 
     n = 6
-    angles = np.arange(n, dtype=np.float32) * 2 * np.pi / n 
+    angles = np.arange(n, dtype=np.float32) * 2 * np.pi / n
     verts  = np.zeros((2*n, 3), dtype=np.float32)
     verts[0:n, 0] = verts[n:2*n, 0] = radius * np.sin(angles)
     verts[0:n, 2] = verts[n:2*n, 2] = radius * np.cos(angles)
     verts[0:n  , 1] =  -length
     verts[n:2*n, 1] =  length
-    
+
     glBegin(GL_TRIANGLES)
     glNormal3d(0, 1, 0)
-    for i in range(1,n-1) : 
-        glVertex3dv( verts[0] );  glVertex3dv( verts[i]   );  glVertex3dv( verts[i+1]   ); 
-        glVertex3dv( verts[n] );  glVertex3dv( verts[n+i] );  glVertex3dv( verts[n+i+1] ); 
+    for i in range(1,n-1) :
+        glVertex3dv( verts[0] );  glVertex3dv( verts[i]   );  glVertex3dv( verts[i+1]   );
+        glVertex3dv( verts[n] );  glVertex3dv( verts[n+i] );  glVertex3dv( verts[n+i+1] );
     glEnd()
 
     glBegin(GL_TRIANGLE_STRIP)
-    for i in range(n): 
+    for i in range(n):
         glNormal3d( verts[i,0]/radius, 0, verts[i,2]/radius)
         glVertex3dv( verts[i] )
         glVertex3dv( verts[n+i] )
     glVertex3dv( verts[0] )
     glVertex3dv( verts[n] )
     glEnd()
-
-
