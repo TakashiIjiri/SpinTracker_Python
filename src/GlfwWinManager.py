@@ -9,12 +9,6 @@ from OpenGL.GLU import *
 
 
 
-
-
-
-
-
-
 def set_light_params():
     light_pos = np.array([[ 1000, 1000,-1000,1],
                           [-1000, 1000,-1000,1],
@@ -43,8 +37,8 @@ def set_light_params():
 
 
 # Class GlfwWinManager
-# this class 
-# + generates & manages glfw_window 
+# this class
+# + generates & manages glfw_window
 # + manages mouse events
 #    following call back functions should be set at constractor
 #    func_Ldown(x,y,glfw_win_manager), func_Lup(x,y,glfw_win_manager),
@@ -52,8 +46,8 @@ def set_light_params():
 #    func_Mdown(x,y,glfw_win_manager), func_Mup(x,y,glfw_win_manager),
 #    func_mouse_move(x,y,glfw_win_manager),
 #    func_draw_scene(glfw_win_manager)
-#    memo (x, y): mouse position, 
-#         window: instance of GlfwMainWindow 
+#    memo (x, y): mouse position,
+#         window: instance of GlfwMainWindow
 #    func_on_keydown(key, glfw_win_manager), func_on_keydown(key, glfw_win_manager)
 #
 class GlfwWinManager:
@@ -67,7 +61,8 @@ class GlfwWinManager:
             func_Rdown, func_Rup,
             func_Mdown, func_Mup,
             func_mouse_move,
-            func_draw_scene, 
+            func_mouse_wheel,
+            func_draw_scene,
             func_on_keydown, func_on_keyup, func_on_keykeep
         ):
 
@@ -77,7 +72,7 @@ class GlfwWinManager:
         self.cam_cnt = np.array([0.0, 0.0,    0.0], dtype=np.float32)
         self.b_rendering = False
         self.viewscale = 1000
-        self.clearcolor = np.array([0.3, 0.3, 0.3, 1.0])
+        self.clearcolor = np.array([0.2, 0.2, 0.2, 1.0])
 
         if not self.window:
             glfw.terminate()
@@ -86,16 +81,18 @@ class GlfwWinManager:
         self.func_Ldown, self.func_Lup = func_Ldown, func_Lup
         self.func_Rdown, self.func_Rup = func_Rdown, func_Rup
         self.func_Mdown, self.func_Mup = func_Mdown, func_Mup
-        self.func_mouse_move = func_mouse_move
-        self.func_draw_scene = func_draw_scene
-        self.func_on_keydown = func_on_keydown
-        self.func_on_keyup   = func_on_keyup  
-        self.func_on_keykeep = func_on_keykeep
+        self.func_mouse_move  = func_mouse_move
+        self.func_draw_scene  = func_draw_scene
+        self.func_on_keydown  = func_on_keydown
+        self.func_on_keyup    = func_on_keyup
+        self.func_on_keykeep  = func_on_keykeep
+        self.func_mouse_wheel = func_mouse_wheel
 
         #set callback functions
-        glfw.set_cursor_pos_callback    (self.window, self.cursor_pos)
-        glfw.set_cursor_enter_callback  (self.window, self.cursor_enter)
-        glfw.set_mouse_button_callback  (self.window, self.mouse_button)
+        glfw.set_cursor_pos_callback    (self.window, self.cursor_pos    )
+        glfw.set_cursor_enter_callback  (self.window, self.cursor_enter  )
+        glfw.set_mouse_button_callback  (self.window, self.mouse_button  )
+        glfw.set_scroll_callback        (self.window, self.mouse_wheel   )
         glfw.set_window_refresh_callback(self.window, self.window_refresh)
         glfw.set_key_callback           (self.window, self.func_keyboard)
         glfw.set_window_pos             (self.window, window_position[0], window_position[1])
@@ -104,6 +101,17 @@ class GlfwWinManager:
         glfw.make_context_current(self.window)
         self.display()   # necessary only on Windows
 
+    def set_campos(self, x,y):
+        self.cam_pos[0] = x
+        self.cam_pos[1] = y
+        self.cam_cnt[0] = x
+        self.cam_cnt[1] = y
+
+    def get_viewscale(self):
+        return self.viewscale
+
+    def set_viewscale(self, scale):
+        self.viewscale = scale
 
     def cursor_pos(self, window, xpos, ypos):
         self.func_mouse_move( (xpos, ypos), self)
@@ -115,11 +123,11 @@ class GlfwWinManager:
     def func_keyboard(self, window, key, scancode, action, mods):
 
         if action == glfw.PRESS:
-            self.func_on_keydown( key, self) 
+            self.func_on_keydown( key, self)
         elif action == glfw.RELEASE:
-            self.func_on_keyup  ( key, self) 
+            self.func_on_keyup  ( key, self)
         elif action == glfw.REPEAT:
-            self.func_on_keykeep( key, self) 
+            self.func_on_keykeep( key, self)
 
     def mouse_button(self, window, button, action, mods):
         point = glfw.get_cursor_pos(window) #point : 2dtuple
@@ -129,6 +137,9 @@ class GlfwWinManager:
         elif ( button == 0 and action == 0) : self.func_Lup  ( point, self)
         elif ( button == 1 and action == 0) : self.func_Rup  ( point, self)
         elif ( button == 2 and action == 0) : self.func_Mup  ( point, self)
+
+    def mouse_wheel(self, window, xoffset, yoffset) :
+        self.func_mouse_wheel(yoffset, self)
 
 
     def window_should_close(self):
@@ -203,18 +214,18 @@ class GlfwWinManager:
         self.__draw_end()
 
 
-    def camera_translate (self, dx, dy) : 
+    def camera_translate (self, dx, dy) :
         cx, cy = glfw.get_window_size(self.window)
         pixel_width = 0.01
-        if cx > cy and cy > 0 : pixel_width = 2 * self.viewscale / cy  
-        else                  : pixel_width = 2 * self.viewscale / cx 
+        if cx > cy and cy > 0 : pixel_width = 2 * self.viewscale / cy
+        else                  : pixel_width = 2 * self.viewscale / cx
         x_dir = np.cross(self.cam_pos - self.cam_cnt, self.cam_up)
         x_dir /= np.linalg.norm(x_dir)
         trans = (pixel_width * dx) * x_dir + (pixel_width * dy) * self.cam_up
         self.cam_pos += trans
         self.cam_cnt += trans
 
-    def camera_zoom(self, dx, dy) : 
+    def camera_zoom(self, dx, dy) :
         self.viewscale *= (1.0 - dy*0.001)
         if self.viewscale < 0.01 : self.viewscale = 0.01
 

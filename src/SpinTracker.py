@@ -32,11 +32,12 @@ class MainDialog(ttk.Frame):
         self.manager = EventManager()
         self.glfw_manager = GlfwWinManager.GlfwWinManager(
             "Main Window", [800, 600], [330,30],
-            self.manager.func_Ldown, self.manager.func_Lup,
-            self.manager.func_Rdown, self.manager.func_Rup,
-            self.manager.func_Mdown, self.manager.func_Mup,
-            self.manager.func_mouse_move, self.manager.func_draw_scene,
-            self.manager.func_on_keydown, self.manager.func_on_keyup, self.manager.func_on_keykeep)
+            self.manager.func_Ldown     , self.manager.func_Lup,
+            self.manager.func_Rdown     , self.manager.func_Rup,
+            self.manager.func_Mdown     , self.manager.func_Mup,
+            self.manager.func_mouse_move, self.manager.func_mouse_wheel,
+            self.manager.func_draw_scene, self.manager.func_on_keydown ,
+            self.manager.func_on_keyup  , self.manager.func_on_keykeep)
 
         #initialize tkinter Frame
         self.root = root_
@@ -65,12 +66,10 @@ class MainDialog(ttk.Frame):
         self.label_spinspeed.grid(row=0, column=0, sticky=tk.W)
         self.label_spinaxis .grid(row=1, column=0, sticky=tk.W)
 
-
         #----fps---- (radio button)
         fps_frame = tk.Frame(self, pady = 3)
         fps_frame.pack(side="top", anchor=tk.W)
         fps_label = ttk.Label(fps_frame, text="FPS of video:")
-
         self.fps_mode = tk.StringVar(None, '480')
         rb1 = ttk.Radiobutton( fps_frame, text= '300', value= '300', variable=self.fps_mode)
         rb2 = ttk.Radiobutton( fps_frame, text= '480', value= '480', variable=self.fps_mode)
@@ -153,10 +152,10 @@ class MainDialog(ttk.Frame):
         btn_frame.pack(side="top", anchor=tk.W)
         btn_import_conf  = ttk.Button(btn_frame,text="Import config", command = self.import_config )
         btn_export_conf  = ttk.Button(btn_frame,text="Export config", command = self.export_config )
-        btn_run_tracking = ttk.Button(btn_frame,text="Run Tracking" , command = self.run_tracking  )
-        btn_import_conf.pack (side="left", anchor=tk.W)
-        btn_export_conf.pack (side="left", anchor=tk.W)
-        btn_run_tracking.pack(side="left", anchor=tk.W)
+        btn_run_tracking = ttk.Button(btn_frame,text="Run Tracking and Spin Analysis" , command = self.run_tracking)
+        btn_import_conf .grid (row=0, column=0, sticky=tk.E + tk.W)
+        btn_export_conf .grid (row=0, column=1, sticky=tk.E + tk.W)
+        btn_run_tracking.grid (columnspan=2, row=1, column=0, sticky=tk.E + tk.W)
 
         # set focus on slider
         self.slider.focus_set()
@@ -167,6 +166,10 @@ class MainDialog(ttk.Frame):
             int(self.mask_angle_val.get()),
             float(self.mask_rate_val.get()) / 100.0 )
 
+        #set camera position and scalling param
+        H, W = VideoManager.get_inst().get_frame_uint8(0).shape
+        self.glfw_manager.set_campos(W/5*3, H/5*3)
+        self.glfw_manager.set_viewscale(W/2)
 
     def quit_spintracker(self):
         exit()
@@ -352,7 +355,7 @@ def main():
         raise RuntimeError("Fails to initialize glfw")
 
     app.title("SpinTracker Parameter")
-    app.geometry("330x370+30+30")
+    app.geometry("330x390+30+30")
     dialog = MainDialog(app)
 
     #note1: with the following mainloop with glfw, tk is not available
