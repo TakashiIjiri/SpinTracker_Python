@@ -73,8 +73,8 @@ Windows 10 / Python 3.8.5 / glfw 2.0.0 / matplotlib 3.3.3 / numpy 1.19.3 / openc
 - updating 
 
 
-![img](https://github.com/TakashiIjiri/SpinTracker_Python/blob/main/imgs/mainwindow.png)
-![img](https://github.com/TakashiIjiri/SpinTracker_Python/blob/main/imgs/dialog.png)
+![img](./imgs/mainwindow.png)
+![img](./imgs/dialog.png)
 
 
 
