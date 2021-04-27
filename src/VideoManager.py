@@ -47,6 +47,7 @@ class VideoManager:
 
     # this function should be called at first
     def load_vidoe_file(self, fname ):
+        self.__file_name = fname
         print("------------Load Axis Candidate (sphere3.obj)--------------")
         sph_path = __file__[:-15] + "sphere3.obj"
         self.__sphere_model = tmesh.TMesh( init_as="Obj", fname=sph_path)
@@ -92,6 +93,9 @@ class VideoManager:
         self.__optimum_spin_period = 10000
         self.__optimum_spin_RPS    = 10000
 
+
+    def get_filename(self) :
+        return self.__file_name
 
     #getters for images
     def get_frame_uint8(self, idx) :
@@ -265,7 +269,11 @@ class VideoManager:
 
         if end_i - start_i < 32 :
             print("the system fails to track the ball well")
-            return
+            return 1000, np.array([0,1,0])
+
+        if end_i - start_i > video_fps * 0.2 :
+            end_i = int( start_i + video_fps * 0.2)
+            # note :only use ball clip in 0.2 sec
 
         #3. generate ballclip
         self.__ballclip = tutil.t_generate_ballclip2(
@@ -293,7 +301,7 @@ class VideoManager:
         print("found spin period candidates", self.__estimated_periods)
         if self.__estimated_periods.shape[0] <= 0 :
             print("system failes to estimte rotation speed")
-            return
+            return 1000, np.array([0,1,0])
 
         #5. prepare ballclip_diff (ballclip - ballclip_ave)
         trgt_frms = max( 16, int( np.min(self.__estimated_periods) ) ) * 2

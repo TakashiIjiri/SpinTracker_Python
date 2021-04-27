@@ -1,0 +1,2 @@
+file, Speed[rps] Speed[rpm] gyro[deg] eff.[%] dir[deg] dir[hh:mm] tilt[deg] tilt[hh:mm]
+C:/VCProjects/SpinTracker_Python/sample/curve1.mp4 40.0 2400.0 19 79 16 9:31 286 6:31

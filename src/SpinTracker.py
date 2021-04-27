@@ -16,7 +16,7 @@ from EventManager import *
 
 import cv2
 import sys
-
+import datetime
 
 
 
@@ -59,12 +59,25 @@ class MainDialog(ttk.Frame):
 
         spin_estim_frame = tk.Frame(self, pady = 3, background="white")
         spin_estim_frame.pack(side="top")
-        self.label_spinspeed = ttk.Label(spin_estim_frame, background="white",
+        self.label_spinspeed  = ttk.Label(spin_estim_frame, background="white",
                                             text="Spin Speed : XXX [RPS]revolution per second")
-        self.label_spinaxis  = ttk.Label(spin_estim_frame, background="white",
-                                            text="Spin Axis  : θ = XXX, φ=XXX [radian]")
-        self.label_spinspeed.grid(row=0, column=0, sticky=tk.W)
-        self.label_spinaxis .grid(row=1, column=0, sticky=tk.W)
+        self.label_spinaxis   = ttk.Label(spin_estim_frame, background="white",
+                                            text="Spin Axis  : θ = XXX, φ=XXX [deg]")
+        self.label_spinaxis3d = ttk.Label(spin_estim_frame, background="white",
+                                            text="Spin Axis  : (xx,xx,xx)[deg]")
+        self.label_spinaxis_gyro = ttk.Label(spin_estim_frame, background="white",
+                                            text="Gyro : XXX[deg], Spin Eff. XXX[%]")
+        self.label_spinaxis_dir  = ttk.Label(spin_estim_frame, background="white",
+                                            text="Dir : XXX[deg], XXX[hh:mm]")
+        self.label_spinaxis_tilt = ttk.Label(spin_estim_frame, background="white",
+                                            text="Tilt: XXX[deg], XXX[hh:mm]")
+
+        self.label_spinspeed    .grid(row=0, column=0, sticky=tk.W)
+        self.label_spinaxis     .grid(row=1, column=0, sticky=tk.W)
+        self.label_spinaxis3d   .grid(row=2, column=0, sticky=tk.W)
+        self.label_spinaxis_gyro.grid(row=3, column=0, sticky=tk.W)
+        self.label_spinaxis_dir .grid(row=4, column=0, sticky=tk.W)
+        self.label_spinaxis_tilt.grid(row=5, column=0, sticky=tk.W)
 
         #----fps---- (radio button)
         fps_frame = tk.Frame(self, pady = 3)
@@ -274,6 +287,7 @@ class MainDialog(ttk.Frame):
                 if a[0] ==  "tempmatch_step":
                     self.miscs_tminterval.set(a[1])
                 print(a)
+        self.spin_mask_changed()
         VideoManager.get_inst().set_roi_rect(rect)
         VideoManager.get_inst().set_ball_radius(r1, r2)
         self.glfw_manager.display()
@@ -294,17 +308,51 @@ class MainDialog(ttk.Frame):
             video_fps      = int(self.fps_mode.get())
         )
 
+        rpm = rps * 60
         axis_theta = 180.0 * math.atan2( -axis[2], axis[0] ) / math.pi
         axis_phi   = 180.0 * math.asin( axis[1]            ) / math.pi
-        axis_theta = '{:.2f}'.format(axis_theta)
-        axis_phi   = '{:.2f}'.format(axis_phi  )
 
-        self.label_spinspeed["text"] = "Spin Speed : " + str(rps) + "[RPS] revolution per second"
-        self.label_spinaxis ["text"] = "Spin Axis  : θ = " + axis_theta + ", φ = " + axis_phi + "[deg]"
+        axis_gyro = round(axis_theta)
+        if axis_gyro > 90 : axis_gyro =  180 - axis_gyro
+        if axis_gyro <-90 : axis_gyro = -180 - axis_gyro
+        axis_eff = round( 100 * (1.0 - np.abs( axis_gyro ) / 90 ) )
+
+        axis_dir = round(180 - 180.0 * math.atan2( axis[1], axis[0] ) / math.pi)
+        axis_dir_hhmm = tutil.convert_angle2hhmm(axis_dir - 90)
+
+        axis_tilt = axis_dir - 90
+        if axis_tilt < 0 : axis_tilt = axis_tilt + 360
+        axis_tilt_hhmm = tutil.convert_angle2hhmm(axis_tilt - 90)
+
+        spin_speed_str = "Spin Speeed : {:.2f}[RPS], {:.2f}[RPM]".format(rps, rpm)
+        self.label_spinspeed["text"] = spin_speed_str
+
+        spin_thephi_str = "Spin Axis  : θ = {:.2f}, φ = {:.2f}[deg]".format(axis_theta, axis_phi)
+        self.label_spinaxis ["text"] = spin_thephi_str
+
+        spin_axis3d_str = "Spin Axis : (x,y,z) = ({:.2f}, {:.2f}, {:.2f})".format(axis[0],axis[1],axis[2])
+        self.label_spinaxis3d ["text"] = spin_axis3d_str
+
+        spin_gyro_str = "Gyro : {}[deg], Spin Eff. {}[%]".format(axis_gyro, axis_eff)
+        self.label_spinaxis_gyro["text"] = spin_gyro_str
+
+        axis_dir_str = "Dir : {}[deg], {}:{}[hh:mm]".format(axis_dir, axis_dir_hhmm[0], axis_dir_hhmm[1])
+        self.label_spinaxis_dir["text"] = axis_dir_str
+
+        axis_tilt_str = "Tilt : {}[deg], {}:{}[hh:mm]".format(axis_tilt, axis_tilt_hhmm[0], axis_tilt_hhmm[1])
+        self.label_spinaxis_tilt["text"] = axis_tilt_str
         self.glfw_manager.display()
 
-
-
+        #export info as text
+        video_name = VideoManager.get_inst().get_filename()
+        timestr = datetime.datetime.now().strftime("%Y%m%d%H%M")
+        with open(video_name + timestr + "_spin.txt", mode='w') as f:
+            f.write("file, Speed[rps] Speed[rpm] gyro[deg] eff.[%] dir[deg] dir[hh:mm] tilt[deg] tilt[hh:mm]\n")
+            f.write( video_name     + " " )
+            f.write( str(rps)       + " " + str(rpm)      + " " )
+            f.write( str(axis_gyro) + " " + str(axis_eff) + " " )
+            f.write( str(axis_dir ) + " " + str(axis_dir_hhmm[0]) + ":" + str(axis_dir_hhmm[1]) + " " )
+            f.write( str(axis_tilt) + " " + str(axis_tilt_hhmm[0]) + ":" + str(axis_tilt_hhmm[1]) + "\n" )
 
 # + 動画を読み込み(file dialogにより指定) OK
 # + OK dialogに GUI 追加
@@ -355,7 +403,7 @@ def main():
         raise RuntimeError("Fails to initialize glfw")
 
     app.title("SpinTracker Parameter")
-    app.geometry("330x390+30+30")
+    app.geometry("330x460+30+30")
     dialog = MainDialog(app)
 
     #note1: with the following mainloop with glfw, tk is not available

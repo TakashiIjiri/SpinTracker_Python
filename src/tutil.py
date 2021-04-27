@@ -21,7 +21,7 @@ def get_zrot(angle):
     return np.array([[ c,-s,  0],[ s, c,  0],[  0,  0,  1]])
 
 
-# Rotation matrix along axis 
+# Rotation matrix along axis
 def get_axisrot (angle, axis) :
     length = np.linalg.norm(axis)
     if length <= 0.0000001 :
@@ -30,8 +30,8 @@ def get_axisrot (angle, axis) :
     return scipy.linalg.expm( np.cross(np.identity(3), angle*axis) )
 
 
-# get rotation matrix (3x3) such that v2 = R v1 
-def get_rotation_vec2vec(v1, v2) : 
+# get rotation matrix (3x3) such that v2 = R v1
+def get_rotation_vec2vec(v1, v2) :
     axis = np.cross(v1,v2)
     axis_norm = np.linalg.norm(axis)
     if axis_norm < 0.000001 :
@@ -39,8 +39,8 @@ def get_rotation_vec2vec(v1, v2) :
     # axis_norm = |v1||v2|sin(angle)
     sin_angle = axis_norm / ( np.linalg.norm(v1) * np.linalg.norm(v2))
     cos_angle = np.sqrt(1 - sin_angle**2)
-    if np.dot(v1,v2) < 0: 
-        cos_angle *= -1 
+    if np.dot(v1,v2) < 0:
+        cos_angle *= -1
     angle = np.arccos( cos_angle )
 
     return get_axisrot(angle, axis/axis_norm)
@@ -52,7 +52,7 @@ def get_rotation_vec2vec(v1, v2) :
 #  x = [[0,1,2,...,w-1], [0,1,2,...,w-1], ..., [0,1,2,...,w-1]]
 #  y = [[0,0,0,...,  0], [1,1,1,..., 1 ], ..., [h-1,h-1,h-1,...,h-1]]
 #
-def gen_index_array2d (heights, width) : 
+def gen_index_array2d (heights, width) :
     y = np.arange(heights).repeat(width).reshape(heights,width)
     x = np.arange(width).reshape((-1,width)).repeat(heights,axis=0)
     return y, x
@@ -60,14 +60,14 @@ def gen_index_array2d (heights, width) :
 
 # -------------------------------------------------------------------
 # t_hough_circle4 (twice the accuracy of the radius)
-# hough transform to search a circle in a binary image 
-#  
+# hough transform to search a circle in a binary image
+#
 #  memo : non accelerated codes of hough transform (t_hough_circle{,1,2,3})
 #         are avaliable below
-# 
+#
 def t_hough_circle4(
-        img_bin,                    # target binary image 
-        min_x, min_y, max_x, max_y, # rectangle area to search 
+        img_bin,                    # target binary image
+        min_x, min_y, max_x, max_y, # rectangle area to search
         min_cx, min_cy, min_r,      # minimum (cx, cy, r) of circle to search
         max_cx, max_cy, max_r       # maximum (cx, cy, r) of circle to search
     ) :
@@ -76,7 +76,7 @@ def t_hough_circle4(
     min_r2, max_r2 = min_r*2, max_r*2
     vol_r  = max_r2  - min_r2
 
-    if  vol_cx <= 0 or vol_cy <= 0 or vol_r <= 0 : 
+    if  vol_cx <= 0 or vol_cy <= 0 or vol_r <= 0 :
         return 0, 0, 0
     vol = np.zeros((vol_r, vol_cy, vol_cx))
 
@@ -89,10 +89,10 @@ def t_hough_circle4(
         (img_bin[ min_y   : max_y-2 , min_x+1: max_x-1] == 0 ) | \
         (img_bin[ min_y+1 : max_y-1 , min_x+2: max_x  ] == 0 ) | \
         (img_bin[ min_y+1 : max_y-1 , min_x  : max_x-2] == 0 ) )
-    idx = np.array ( np.where(b) ) 
+    idx = np.array ( np.where(b) )
     idx[0] += min_y+1
     idx[1] += min_x+1
-    for i in range(idx.shape[1]) : 
+    for i in range(idx.shape[1]) :
         by = idx[0,i]
         bx = idx[1,i]
         r = np.sqrt( (bx-x_src)**2 + (by-y_src)**2 ) * 2
@@ -121,10 +121,10 @@ def t_hough_circle4(
 
 # -------------------------------------------------------------------
 # t_cubic_supersampling_1d
-# performs cubic super sampling for 1d array 
-# 
+# performs cubic super sampling for 1d array
+#
 # num_sample : num of sample points between src[i]~src[i+1] (integer)
-# 
+#
 def t_cubic_supersampling_1d ( src, num_sample = 10 ) :
     num_points = (src.shape[0] - 1) * num_sample + 1
     trgt = np.zeros(num_points, dtype=np.float32)
@@ -163,10 +163,10 @@ def t_cubic_supersampling_1d ( src, num_sample = 10 ) :
 # this function opens a video (mp4), loads all frames, and store them in a np.array()
 # this returns np.array(N, W, H)
 #
-# memo : grayscale images loaded by cv2  are slightly different from those by ffmpeg.      
-#        with this difference the cost values obtained with this python codes are 
-#        different from those by C++ version 
-# 
+# memo : grayscale images loaded by cv2  are slightly different from those by ffmpeg.
+#        with this difference the cost values obtained with this python codes are
+#        different from those by C++ version
+#
 def load_video(file_path, maxnum_frames=1024) :
     cap = cv2.VideoCapture(file_path )
     ret, frame = cap.read()
@@ -185,6 +185,8 @@ def load_video(file_path, maxnum_frames=1024) :
     for i in range(1, num_frames) :
         ret, frame = cap.read()
         if ret == 0 :
+            print("video header was strange...")
+            frames = np.resize(frames, (i-1, h, w))
             break
         frames[i,:,:] = np.float32(cv2.cvtColor(np.flipud(frame), cv2.COLOR_BGR2GRAY))
     return frames
@@ -192,9 +194,9 @@ def load_video(file_path, maxnum_frames=1024) :
 
 # -------------------------------------------------------------------
 # gen_morpho_operation_kernel
-# this function generates "diamond"-shaped kernel 
+# this function generates "diamond"-shaped kernel
 # used for morphological operation
-# 
+#
 def gen_morpho_operation_kernel( r ) :
     n = 2 * r + 1
     kernel = np.zeros((n,n), dtype=np.uint8)
@@ -221,7 +223,7 @@ def gen_mask_image (mask_radi, mask_angle, mask_rate) :
 
     y, x = gen_index_array2d(mask_w, mask_w)
     y -= c
-    x -= c 
+    x -= c
     mask = coef_2sspi * np.exp( -(x**2 + y**2) * coef_2ss )
 
     # set zero out side the circle
@@ -231,7 +233,7 @@ def gen_mask_image (mask_radi, mask_angle, mask_rate) :
     dir_x = np.cos(mask_angle/180*np.pi)
     t = (mask_radi * (1-mask_rate))**2
     mask[ ((x**2 + y**2) > t ) & (dir_x*x + dir_y*y > 0.000001) ] = 0
-    
+
     return mask
 
 
@@ -245,49 +247,49 @@ def save_chart(title1, fname, points):
     fig.savefig(fname)
 
 # -------------------------------------------------------------------
-# this function 
-# - plots (points) as a 1d chart 
-# - draw a vertical bar 
+# this function
+# - plots (points) as a 1d chart
+# - draw a vertical bar
 # - and save it as (fname)
 #
 # title1 : chart title
 # fname  : file name to export
-# points : y_values to plot 
+# points : y_values to plot
 # bar_x  : x_positions of vertical bars
 #
 def save_chart_with_bars(title1, fname, points, bar_x):
     fig = plt.figure(figsize=(8.0, 4.0), dpi=100, facecolor='w', linewidth=0, edgecolor='w')
     sub = fig.add_subplot(111, title=title1, xlabel="x0", ylabel='y0' )
     sub.plot( np.arange(points.shape[0]), points)
-    
+
     color = ["red", "green", "blue", "yellow", "cyan", "magenta"]
     min_y, max_y = 0.0, 1.0
-    for i in range(bar_x.shape[0]) : 
+    for i in range(bar_x.shape[0]) :
         sub.plot([bar_x[i], bar_x[i]], [min_y, max_y], color[i%6], linestyle='dashed')
-    
+
     fig.savefig(fname)
 
 
 # -------------------------------------------------------------------
-# this function computs ANDF  
+# this function computs ANDF
 # AMDF : Average magnitude difference function Fk = Σ | f(i) - f(i+k) |
-# 
-def t_AMDF(src) : 
+#
+def t_AMDF(src) :
     n = src.shape[0]
     src = np.float32(src)
     """
     amdf = np.zeros(n, dtype=np.float64)
-    for k in range(n) : 
+    for k in range(n) :
         for i in range(n) :
-            if i-k < 0 :  
+            if i-k < 0 :
                 amdf[k] += np.abs(src[i]-src[-(i-k)])
-            else : 
+            else :
                 amdf[k] += np.abs(src[i]-src[ i-k ])
     """
     # acceleration above
     amdf_acc = np.zeros(n, dtype=np.float32)
     src2 = np.hstack((src[n-1:0:-1], src))
-    for k in range(n) : 
+    for k in range(n) :
         amdf_acc[k] = np.sum(np.abs(src - src2[(n-1)-k:(n-1)-k+n]))
 
     return amdf_acc
@@ -296,7 +298,7 @@ def t_AMDF(src) :
 # -------------------------------------------------------------------
 # this function applies gaussian smoothing (num_smoothing times)
 #
-def t_smoothing(src, num_smoothing) : 
+def t_smoothing(src, num_smoothing) :
     for i_smooth in range(num_smoothing) :
         tmp = src.copy()
         for fi in range(1, src.shape[0]-1) :
@@ -307,9 +309,9 @@ def t_smoothing(src, num_smoothing) :
 
 # -------------------------------------------------------------------
 # normalize 1d array
-def t_normalize_1d(src) : 
+def t_normalize_1d(src) :
     minv, maxv = np.min(src), np.max(src)
-    return (src - minv) / ( maxv-minv ) 
+    return (src - minv) / ( maxv-minv )
 
 
 # -------------------------------------------------------------------
@@ -317,7 +319,7 @@ def t_normalize_1d(src) :
 # templates[ 0 ] has radius self.ball_r1
 # templates[n-1] has radius self.ball_r1
 # templates[i]   interplates r1~r2
-# 
+#
 def __gen_ball_templates(r1, r2, num_templates) :
     r = max(r1, r2)
     temp_radi = int( r * 3 / 2 )
@@ -335,15 +337,15 @@ def __gen_ball_templates(r1, r2, num_templates) :
 # t_trackball_temp_match
 # this function ...
 # + binarizes the video frames (frames) by background subtraction
-# + adopts template matching 
+# + adopts template matching
 # + fints valid sequences for frames (start_i, end_i)
 #
 def t_trackball_temp_match(
         frames,
-        r1, 
+        r1,
         r2,
-        bkgrnd_mode, 
-        bkgrnd_thresh, 
+        bkgrnd_mode,
+        bkgrnd_thresh,
         TM_STEP
     ):
     # background subtraction / morphological operation (opening)
@@ -403,27 +405,27 @@ def t_trackball_temp_match(
 # t_trackball_hough
 # this function adopt hough transform to binarized video frames (frames_bin)
 # and returns a sequence of (cx,cy,radius)
-# 
+#
 def t_trackball_hough(
-        frames_bin, 
-        r1, 
-        r2, 
+        frames_bin,
+        r1,
+        r2,
         tempmatch_cxcy,
         start_i,
-        end_i  
+        end_i
     ):
     print("Track ball by Hough Transform...")
     r = max( r1, r2)
     n = tempmatch_cxcy.shape[0]
     hough_xyr = np.zeros((n,3), dtype=np.float32)
-    
+
     for fi in range( start_i, end_i + 1) :
         cx, cy = tempmatch_cxcy[fi]
         hough_xyr[fi,:] = t_hough_circle4( frames_bin[fi],
                             cx - r   , cy-r   , cx + r, cy + r,
                             cx - r//2, cy-r//2, r//3,  cx + r//2, cy+r//2, r)
         if fi % 50 == 0 :
-            print("compute hough transform ", fi, "/", end_i) 
+            print("compute hough transform ", fi, "/", end_i)
 
     #Smoothing hough transform results
     NUM_SMOOTHING = 10
@@ -441,7 +443,7 @@ def t_generate_ballclip(
         r1,
         r2,
         center_xyr,
-        start_i, 
+        start_i,
         end_i
     ):
     n = frames.shape[0]
@@ -462,7 +464,7 @@ def t_generate_ballclip2(
         r1,
         r2,
         center_xyr,
-        start_i, 
+        start_i,
         end_i
     ):
 
@@ -470,8 +472,8 @@ def t_generate_ballclip2(
     clip_r = max(r1, r2)
     clip_w = 2 * clip_r + 1
     ballclips = np.zeros((n, clip_w, clip_w), np.float32)
-    
-    for fi in range(start_i, end_i) : 
+
+    for fi in range(start_i, end_i) :
         frm = frames[fi,:,:]
         cx, cy, cr = center_xyr[fi]
         rate = cr / clip_r
@@ -487,20 +489,20 @@ def t_generate_ballclip2(
         a1 = (1-tx) * frm[yi+1, xi] + tx * frm[yi+1, xi+1]
         a = ballclips[fi,:,:] = np.int32( np.minimum(255.0, (1-ty) * a0 + ty * a1)).reshape(clip_w, clip_w)
         """
-        for y in range(-clip_r, clip_r + 1) : 
-            for x in range(-clip_r, clip_r + 1) : 
+        for y in range(-clip_r, clip_r + 1) :
+            for x in range(-clip_r, clip_r + 1) :
                 px = cx + x * rate - 0.5
                 py = cy + y * rate - 0.5
                 xi = int(px)
                 yi = int(py)
-                if yi < 0 or yi > h-1 or xi < 0 or xi > w-1: 
+                if yi < 0 or yi > h-1 or xi < 0 or xi > w-1:
                     continue
                 tx = px - xi
                 ty = py - yi
                 a0 = (1-tx) * frm[yi  , xi] + tx * frm[yi  , xi+1]
                 a1 = (1-tx) * frm[yi+1, xi] + tx * frm[yi+1, xi+1]
                 ballclips[fi, y+clip_r, x+clip_r] = int( min(255.0, (1-ty) * a0 + ty * a1))
-        """ 
+        """
     return ballclips
 
 
@@ -510,21 +512,21 @@ def t_generate_ballclip2(
 # computs average image of ballclip
 # and computs ballclip_diff = ballclip - average_img
 # to remove shading effects
-# 
-# + ballclip : sequence  of ball_clipcs 
-#     size -- (n_frm x w x w), 
+#
+# + ballclip : sequence  of ball_clipcs
+#     size -- (n_frm x w x w),
 #     ball clip is already clipped in time direction(n_frm = end_i - start_i)
 #
 def t_gen_ballclip_diff (
-        ballclip , 
+        ballclip ,
         BLUR_RATE = 0.1) :
-    
+
     n,h,w = ballclip.shape
     ballclip_diff = np.zeros((n,h,w), dtype=np.float64)
 
     # Gaussian blur, calc average image,
     BLUR_RATE = 0.1
-    gauss_std = h * BLUR_RATE * 0.5 
+    gauss_std = h * BLUR_RATE * 0.5
     gauss_w   = int(3*gauss_std) * 2 + 1
     for fi in range(n) :
         #ballclip_diff[fi] = cv2.GaussianBlur( ballclip[fi], (gauss_w,gauss_w), gauss_std )
@@ -535,18 +537,18 @@ def t_gen_ballclip_diff (
         ballclip_diff[fi] = ballclip_diff[fi] - ballclip_ave
     return ballclip_ave, ballclip_diff
 
-    
+
 # -------------------------------------------------------------------
-# + ballclip : sequence  of ball_clipcs 
-#   size -- (n_frm x w x w),  
+# + ballclip : sequence  of ball_clipcs
+#   size -- (n_frm x w x w),
 #   type -- np.array (float32)
 #   (ball_clip_diff in VideoManager, n_frm = end_i - start_i)
 #
 def t_estimate_spinspeed(
-        ballclip  , 
+        ballclip  ,
         bc_mask   ,
         VIDEO_FPS ,
-        MAX_RPS 
+        MAX_RPS
     ) :
     n, h, w = ballclip.shape
     rps_candidates = np.zeros(0)
@@ -561,7 +563,7 @@ def t_estimate_spinspeed(
     """
     y, x = gen_index_array2d(n, n)
     y, x = y.reshape(-1), x.reshape(-1)
-    diff_ij = np.sum( bc_mask * (ballclip[y] - ballclip[x]) ** 2, axis=(1,2) ).reshape(n,n) 
+    diff_ij = np.sum( bc_mask * (ballclip[y] - ballclip[x]) ** 2, axis=(1,2) ).reshape(n,n)
     t3 = time.time()
 
     # sum up Dij in diagonal direction to get vi (see 4th page of [Ijiri et al, automatic spin measurement...])
@@ -579,16 +581,16 @@ def t_estimate_spinspeed(
     vi_fine = t_normalize_1d(vi_fine)
     vi_amdf = t_normalize_1d(vi_amdf)
 
-    # when the fastest spin occurs...        
-    # 1 / MAX_RPS --> seconds for one revolution 
-    # (1 / MAX_RPS) * VIDEO_FPS --> frames for one revolution 
+    # when the fastest spin occurs...
+    # 1 / MAX_RPS --> seconds for one revolution
+    # (1 / MAX_RPS) * VIDEO_FPS --> frames for one revolution
     MAX_NUM_CANDIDATES = 5
     min_ids = []
     amdf_minfrm = int( ((1 / MAX_RPS) * VIDEO_FPS ) * VI_SUPERSAMPLE_RATE )
-    for fi in range(amdf_minfrm+1, vi_amdf.shape[0] - 1) : 
-        if vi_amdf[fi] < 0.6 and vi_amdf[fi-1] > vi_amdf[fi] and vi_amdf[fi] <=  vi_amdf[fi+1] :  
+    for fi in range(amdf_minfrm+1, vi_amdf.shape[0] - 1) :
+        if vi_amdf[fi] < 0.6 and vi_amdf[fi-1] > vi_amdf[fi] and vi_amdf[fi] <=  vi_amdf[fi+1] :
             min_ids.append(fi)
-            if len (min_ids) >= MAX_NUM_CANDIDATES : 
+            if len (min_ids) >= MAX_NUM_CANDIDATES :
                 break
 
     print(min_ids)
@@ -597,15 +599,15 @@ def t_estimate_spinspeed(
     res_spin_periods    = min_ids / VI_SUPERSAMPLE_RATE
     res_estimated_RPSs = VIDEO_FPS / res_spin_periods
 
-    #output estimation info 
+    #output estimation info
     save_chart_with_bars("vi"     , "vi_.png"     , vi     , min_ids / VI_SUPERSAMPLE_RATE)
     save_chart_with_bars("vi_fine", "vi_fine_.png", vi_fine, min_ids)
     save_chart_with_bars("vi_amdf", "vi_amdf_.png", vi_amdf, min_ids)
 
     print("estimated spin rate...")
-    for i in range(res_spin_periods.shape[0] ) : 
-        print("frame:", res_spin_periods[i]  )   
-        print("Rev. Per Sec.:", res_estimated_RPSs[i]) 
+    for i in range(res_spin_periods.shape[0] ) :
+        print("frame:", res_spin_periods[i]  )
+        print("Rev. Per Sec.:", res_estimated_RPSs[i])
 
     return res_spin_periods, res_estimated_RPSs
 
@@ -614,34 +616,34 @@ def t_estimate_spinspeed(
 
 
 # -------------------------------------------------------------------
-# calc_costs_for_axis_candidates 
+# calc_costs_for_axis_candidates
 # this function computes matching costs for all axis (candidate_axes)
-# + ballclip : sequence  of ball_clipcs 
+# + ballclip : sequence  of ball_clipcs
 #     size and type -- n_frm x w x w, float32
 #     shading effect is already removed (by subtracting  mean image)
 # + candidate_axes : multiple candidates of rotation axis
-# + frames_for_one_spin : num of frames for single revolution 
+# + frames_for_one_spin : num of frames for single revolution
 # + mask : ball clip mask (size is w x w)
 # + K    : offset num of frames for matching (default is 1)
-# 
+#
 def  calc_costs_for_axis_candidates(
         ballclip,
         candidate_axes,
-        frames_for_one_spin, 
-        bc_mask, 
-        K  = 1) : 
-    
+        frames_for_one_spin,
+        bc_mask,
+        K  = 1) :
+
     num_bc_frames, ball_w, _  = ballclip.shape
-    ball_r   = ballclip.shape[1] // 2 
+    ball_r   = ballclip.shape[1] // 2
     w0       = 2 * np.pi / frames_for_one_spin
 
-    # idx_x / idx_y : 2d array of pixel indices 
+    # idx_x / idx_y : 2d array of pixel indices
     idx_y_src, idx_x_src = gen_index_array2d(ball_w, ball_w)
 
     # map pixels onto a spehere (origin is (ball_r + 0.5,  ball_r + 0.5, 0))
     px = idx_x_src + 0.5 - (ball_r + 0.5)
     py = idx_y_src + 0.5 - (ball_r + 0.5)
-    pz = ball_r **2 - px**2 - py**2 
+    pz = ball_r **2 - px**2 - py**2
     b_trgt_pix  = (pz >= 0) & (bc_mask>0)  # ignor pixels outside circle and mask(y,x) = 0
     pz[ pz < 0] = 0
     pz = np.sqrt(pz)
@@ -650,17 +652,17 @@ def  calc_costs_for_axis_candidates(
     costs_at_allaxis = np.zeros(candidate_axes.shape[0], dtype=np.float32)
 
     time_start = time.perf_counter()
-    for axis_i, axis in enumerate(candidate_axes) : 
+    for axis_i, axis in enumerate(candidate_axes) :
 
         # rotate all points in pixel_pos to get their distination pixel idx
         rot = get_axisrot(w0*K, axis)
 
         rot_pos = np.dot(rot, pixel_pos)
-        rot_px = rot_pos[0,:].reshape(ball_w, ball_w) 
-        rot_py = rot_pos[1,:].reshape(ball_w, ball_w) 
+        rot_px = rot_pos[0,:].reshape(ball_w, ball_w)
+        rot_py = rot_pos[1,:].reshape(ball_w, ball_w)
         rot_pz = rot_pos[2,:].reshape(ball_w, ball_w)
-        idx1_x = idx_x_src.copy() 
-        idx1_y = idx_y_src.copy() 
+        idx1_x = idx_x_src.copy()
+        idx1_y = idx_y_src.copy()
         idx2_x = np.int32(rot_px + ball_r + 0.5)
         idx2_y = np.int32(rot_py + ball_r + 0.5)
 
@@ -669,31 +671,31 @@ def  calc_costs_for_axis_candidates(
         idx1_x, idx1_y = idx1_x[bool_trgt], idx1_y[bool_trgt]
         idx2_x, idx2_y = idx2_x[bool_trgt], idx2_y[bool_trgt]
 
-        # comput costs with fancy indexing 
-        weights = bc_mask[idx1_y, idx1_x] * bc_mask[idx2_y, idx2_x] 
+        # comput costs with fancy indexing
+        weights = bc_mask[idx1_y, idx1_x] * bc_mask[idx2_y, idx2_x]
         sum_weight = np.sum(weights) * (num_bc_frames - K)
-        tmp = weights * (  ballclip[:- K, idx1_y, idx1_x] - ballclip[K:   , idx2_y, idx2_x] )**2 
-        costs_at_allaxis[axis_i] = np.sum(tmp) / sum_weight 
+        tmp = weights * (  ballclip[:- K, idx1_y, idx1_x] - ballclip[K:   , idx2_y, idx2_x] )**2
+        costs_at_allaxis[axis_i] = np.sum(tmp) / sum_weight
         if axis_i % 1000 == 0:
             print("axis estimation ", axis_i, candidate_axes.shape[0])
         """
-        if axis_i == 5 : 
+        if axis_i == 5 :
             print("sum_weights and cost : ", sum_weight, costs_at_allaxis[axis_i])
-            # Original implementation 
+            # Original implementation
             idx1 = []
             idx2 = []
-            weights = [] 
+            weights = []
             rot = get_axisrot(w0*K, axis)
             cx, cy = ball_r + 0.5, ball_r + 0.5
-            for y in range(ball_w) : 
-                for x in range(ball_w) : 
+            for y in range(ball_w) :
+                for x in range(ball_w) :
                     z = ball_r ** 2 - (x + 0.5-cx)**2 - (y+0.5-cy)**2
                     if z < 0 : continue
                     fp = np.dot(rot, np.array( [x+0.5-cx, y+0.5-cy, np.sqrt( z )] ))
                     xi = int( fp[0] + cx )
                     yi = int( fp[1] + cy )
                     if  fp[2] < 0 or xi < 0 or yi < 0 : continue
-                    w = bc_mask[y,x] * bc_mask[yi, xi] 
+                    w = bc_mask[y,x] * bc_mask[yi, xi]
 
                     if y == 2 and x == 24:
                         print("here !!!" , bc_mask[y,x], bc_mask[yi, xi] )
@@ -705,15 +707,15 @@ def  calc_costs_for_axis_candidates(
             weightSum = 0
             energy    = 0
 
-            for f in range(ballclip.shape[0]-K) : 
+            for f in range(ballclip.shape[0]-K) :
                 clip1 = ballclip[f  ]
                 clip2 = ballclip[f+K]
-                for i in range(len(idx1)) : 
+                for i in range(len(idx1)) :
                     weightSum += weights[i]
-                    energy    += weights[i] * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) 
+                    energy    += weights[i] * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] )
             energy /= weightSum
-            for i in range(10) : 
-                print(idx1[i],idx2[i],"   ") 
+            for i in range(10) :
+                print(idx1[i],idx2[i],"   ")
 
             print("sum_weights and cost : ", weightSum, energy)
 
@@ -721,11 +723,11 @@ def  calc_costs_for_axis_candidates(
             """
     return costs_at_allaxis
 
-    
 
 
-# + ballclip : sequence  of ball_clipcs 
-#   size -- (n_frm x w x w),  
+
+# + ballclip : sequence  of ball_clipcs
+#   size -- (n_frm x w x w),
 #   type -- np.array (float32)
 #   (ball_clip_diff in VideoManager, n_frm = end_i - start_i)
 
@@ -733,44 +735,44 @@ def t_estimate_spinaxis(
         ballclip         ,
         bc_mask          ,
         candidate_periods,
-        candidate_axes 
-    ) : 
+        candidate_axes
+    ) :
     print("t_estimate_spinaxis")
 
-    # check input 
-    if candidate_periods.shape[0] <= 0 : 
+    # check input
+    if candidate_periods.shape[0] <= 0 :
         print("system fails to track ball or to estimate revolution speed")
         return
 
     num_candidates = candidate_periods.shape[0]
-    
+
     period_and_diff = []
 
     min_diff = 1.7976931348623157e+308
     optim_axis = np.array([.0,.0,.0], dtype=np.float32)
     optim_period = 0
     res_costs_for_allaxes = np.zeros(candidate_axes.shape[0])
-    for candi_i in range(candidate_periods.shape[0]) : 
+    for candi_i in range(candidate_periods.shape[0]) :
 
         costs_for_allaxis = calc_costs_for_axis_candidates(
                 ballclip,
-                candidate_axes, 
-                candidate_periods[candi_i], 
-                bc_mask, 
-                K  = 1) 
-        
+                candidate_axes,
+                candidate_periods[candi_i],
+                bc_mask,
+                K  = 1)
+
         idx  = np.argmin( costs_for_allaxis )
         diff = costs_for_allaxis[idx]
         axis = candidate_axes[idx]
 
         period_and_diff.append([candidate_periods[candi_i], diff])
 
-        if diff < min_diff : 
-            min_diff = diff 
-            optim_axis = axis 
+        if diff < min_diff :
+            min_diff = diff
+            optim_axis = axis
             res_costs_for_allaxes = costs_for_allaxis
             optim_period = candidate_periods[candi_i]
-    
+
     print("---------------------------------------------")
     print("axis estimation DONE!")
     print("period and diff value : " )
@@ -782,23 +784,38 @@ def t_estimate_spinaxis(
 
 
 
+"""
+    angle_deg : angle owhere  0 deg corresponds to 12:00,
+                             90 deg corresponds to 03:00
+"""
+def convert_angle2hhmm(angle_deg) :
+    angle_deg = int(angle_deg)
+    angle_deg = angle_deg % 360 # angle is in [0,360]
+    hh = angle_deg // 30
+    mm = (angle_deg / 30 - hh) * 60
+    # or mm = (angle_deg - 30 * hh) * 60 / 30
+    return hh, int(mm)
+
+
+
+
 
 """
-    # Original implementation 
+    # Original implementation
     idx1 = []
     idx2 = []
-    weights = [] 
+    weights = []
     rot = get_axisrot(w0*K, axis)
     cx, cy = ball_r + 0.5, ball_r + 0.5
-    for y in range(ball_w) : 
-        for x in range(ball_w) : 
+    for y in range(ball_w) :
+        for x in range(ball_w) :
             z = ball_r ** 2 - (x + 0.5-cx)**2 - (y+0.5-cy)**2
             if z < 0 : continue
             fp = np.dot(rot, np.array( [x+0.5-cx, y+0.5-cy, np.sqrt( z )] ))
             xi = int( fp[0] + cx )
             yi = int( fp[1] + cy )
             if  fp[2] < 0 or xi < 0 or yi < 0 : continue
-            w = bc_mask[y,x] * bc_mask[yi, xi] 
+            w = bc_mask[y,x] * bc_mask[yi, xi]
             if w <= 0.00000001 : continue
             idx1.append([y ,x ])
             idx2.append([yi,xi])
@@ -806,12 +823,12 @@ def t_estimate_spinaxis(
     weightSum = 0
     energy    = 0
 
-    for f in range(ballclip.shape[0]-K) : 
+    for f in range(ballclip.shape[0]-K) :
         clip1 = ballclip[f  ]
         clip2 = ballclip[f+K]
-        for i in range(len(idx1)) : 
+        for i in range(len(idx1)) :
             weightSum += weights[i]
-            energy    += weights[i] * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) 
+            energy    += weights[i] * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] ) * (clip1[idx1[i][0], idx1[i][1]] - clip2[idx2[i][0], idx2[i][1]] )
     energy /= weightSum
     print("sum_weights and cost : ", weightSum, energy)
 """
@@ -822,13 +839,13 @@ def t_estimate_spinaxis(
 
 
 """
-# ------------------------------------------------------------------- 
+# -------------------------------------------------------------------
 # t_hough_circle
-# hough transform to search a circle in a binary image 
-# 
+# hough transform to search a circle in a binary image
+#
 def t_hough_circle(
-        img_bin,                    # target binary image 
-        min_x, min_y, max_x, max_y, # rectangle area to search 
+        img_bin,                    # target binary image
+        min_x, min_y, max_x, max_y, # rectangle area to search
         min_cx, min_cy, min_r,      # minimum (cx, cy, r) of circle to search
         max_cx, max_cy, max_r       # maximum (cx, cy, r) of circle to search
     ) :
@@ -869,11 +886,11 @@ def t_hough_circle(
 """
 # -------------------------------------------------------------------
 # t_hough_circle2 (faster than t_hough_circle)
-# hough transform to search a circle in a binary image 
-# 
+# hough transform to search a circle in a binary image
+#
 def t_hough_circle2(
-        img_bin,                    # target binary image 
-        min_x, min_y, max_x, max_y, # rectangle area to search 
+        img_bin,                    # target binary image
+        min_x, min_y, max_x, max_y, # rectangle area to search
         min_cx, min_cy, min_r,      # minimum (cx, cy, r) of circle to search
         max_cx, max_cy, max_r       # maximum (cx, cy, r) of circle to search
     ) :
@@ -920,11 +937,11 @@ def t_hough_circle2(
 """
 # -------------------------------------------------------------------
 # t_hough_circle3 (faster than t_hough_circle2)
-# hough transform to search a circle in a binary image 
-# 
+# hough transform to search a circle in a binary image
+#
 def t_hough_circle3(
-    img_bin,                    # target binary image 
-    min_x, min_y, max_x, max_y, # rectangle area to search 
+    img_bin,                    # target binary image
+    min_x, min_y, max_x, max_y, # rectangle area to search
     min_cx, min_cy, min_r,      # minimum (cx, cy, r) of circle to search
     max_cx, max_cy, max_r       # maximum (cx, cy, r) of circle to search
     ):
@@ -943,10 +960,10 @@ def t_hough_circle3(
         (img_bin[ min_y   : max_y-2 , min_x+1: max_x-1] == 0 ) | \
         (img_bin[ min_y+1 : max_y-1 , min_x+2: max_x  ] == 0 ) | \
         (img_bin[ min_y+1 : max_y-1 , min_x  : max_x-2] == 0 ) )
-    idx = np.array ( np.where(b) ) 
+    idx = np.array ( np.where(b) )
     idx[0] += min_y+1
     idx[1] += min_x+1
-    for i in range(idx.shape[1]) : 
+    for i in range(idx.shape[1]) :
         by = idx[0,i]
         bx = idx[1,i]
         r = np.sqrt( (bx-x_src)**2 + (by-y_src)**2 )
