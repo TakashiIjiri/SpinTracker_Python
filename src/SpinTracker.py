@@ -312,10 +312,8 @@ class MainDialog(ttk.Frame):
         axis_theta = 180.0 * math.atan2( -axis[2], axis[0] ) / math.pi
         axis_phi   = 180.0 * math.asin( axis[1]            ) / math.pi
 
-        axis_gyro = round(axis_theta)
-        if axis_gyro > 90 : axis_gyro =  180 - axis_gyro
-        if axis_gyro <-90 : axis_gyro = -180 - axis_gyro
-        axis_eff = round( 100 * (1.0 - np.abs( axis_gyro ) / 90 ) )
+        axis_gyro  = round( 180.0 * math.asin( axis[2]     ) / math.pi)
+        axis_eff   = round( 100 * (1.0 - np.abs( axis_gyro ) / 90 ) )
 
         axis_dir = round(180 - 180.0 * math.atan2( axis[1], axis[0] ) / math.pi)
         axis_dir_hhmm = tutil.convert_angle2hhmm(axis_dir - 90)
